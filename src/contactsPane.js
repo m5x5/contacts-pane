@@ -27,6 +27,7 @@ import {
 import { alertDialog, complain, deleteThingAndDoc, setDom, setupResponsiveStacking } from './localUtils'
 import * as debug from './debug'
 import './styles/contactsRDFFormsEnforced.css'
+import { registrationControl } from './sharing'
 
 const ns = UI.ns
 const utils = UI.utils
@@ -840,7 +841,7 @@ function buildFooterButtons (ctx) {
         dom,
         statusRegion: div
       }
-      UI.login.registrationControl(sharingContext, book, ns.vcard('AddressBook'))
+      registrationControl(sharingContext, book, ns.vcard('AddressBook'))
         .then(() => debug.log('Registration control finished.'))
         .catch(e => {
           debug.error('Error in registration control. Stack: ' + e)
