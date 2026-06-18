@@ -11,9 +11,7 @@ export default {
     '@babel/preset-typescript',
   ],
   plugins: [
-    ['@babel/plugin-proposal-decorators', { version: '2023-05', decoratorsBeforeExport: false }],
-    ['@babel/plugin-proposal-class-properties', { loose: false }],
-    '@babel/plugin-transform-class-static-block',
+    'babel-plugin-transform-import-meta',
     [
       'babel-plugin-inline-import', {
         extensions: [

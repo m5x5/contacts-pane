@@ -1,5 +1,4 @@
 import { default as contactsPane } from '../src/contactsPane'
-import { default as profilePane } from '../../profile-pane/src/index'
 import { longChatPane } from '../../chat-pane/src/longChatPane'
 import { DataBrowserContext, PaneRegistry } from 'pane-registry'
 import { solidLogicSingleton, store } from 'solid-logic'
@@ -37,8 +36,6 @@ export const context: DataBrowserContext = {
         switch (name) {
         case 'contact':
           return contactsPane
-        case 'profile':
-          return profilePane
         case 'long chat':
           return longChatPane
         default:
