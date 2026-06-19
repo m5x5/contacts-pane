@@ -15,9 +15,10 @@ const webIdToShow = 'https://solidos.solidcommunity.net/Contacts/index.ttl#this'
 // const webIdToShow = 'https://testingsolidos.solidcommunity.net/profile/card#me'
 
 async function finishLogin() {
-  await authSession.handleIncomingRedirect({ restorePreviousSession: true })
+  await authn.checkUser()
   const session = authSession
-  if (session.info.isLoggedIn) {
+  const isLoggedIn = session?.info?.isLoggedIn ?? session?.isActive ?? Boolean(session?.webId)
+  if (isLoggedIn) {
     // Update the page with the status.
     webId.textContent = 'Logged in as: ' + authn.currentUser().uri
   } else {
