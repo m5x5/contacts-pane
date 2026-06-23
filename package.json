@@ -61,7 +61,7 @@
     "babel-plugin-transform-import-meta": "^2.3.3",
     "baseline-browser-mapping": "^2.9.19",
     "buffer": "^6.0.3",
-    "chat-pane": "^3.0.4-0",
+    "chat-pane": "^3.0.4-1",
     "copy-webpack-plugin": "^14.0.0",
     "css-loader": "^7.1.4",
     "eslint": "^9.39.2",
