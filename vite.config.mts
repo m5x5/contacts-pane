@@ -4,7 +4,7 @@ import { isAbsolute } from "node:path";
 
 export default defineConfig({
   plugins: solidPane({
-    litDecoratorPaths: [],
+    litDecoratorPaths: ["src/components"],
     sandbox: {
       subject: "https://solidos.solidcommunity.net/Contacts/index.ttl#this",
     },
