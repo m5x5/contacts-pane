@@ -108,7 +108,9 @@ export default class AddContactModal extends WebComponent {
   }
 
   private onNameChanged (e: Event) {
-    this.name = (e.target as Input).value
+    const { value } = e.target as Input
+
+    this.name = typeof value === 'string' ? value : ''
   }
 
   private async onSubmit (e: Event) {
