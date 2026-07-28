@@ -50,29 +50,6 @@
   margin: 0;
 }
 
-/* ── Contact type chooser ───────────────────────────────────── */
-
-.contactPane .contactTypeChooser {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  max-width: 22.5rem; /* 360px */
-}
-
-.contactPane .contactTypeChooser h3 {
-  margin: 0 0 var(--spacing-xs) 0;
-  font-size: var(--font-size-lg);
-}
-
-.contactPane .contactTypeSelect {
-  height: var(--min-touch-target);
-  border: var(--border-width-sm, 1px) solid var(--color-border-pale);
-  border-radius: var(--border-radius-base);
-  padding: 0 var(--spacing-sm);
-  font-size: var(--font-size-sm);
-  background: var(--color-section-bg);
-}
-
 /* ── Search ──────────────────────────────────────────────────── */
 
 .contactPane .allGroupsButton {

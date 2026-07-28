@@ -10,9 +10,7 @@ to change its state according to an ontology, comment on it, etc.
 **
 */
 
-import { html } from 'lit'
 import { authn } from 'solid-logic'
-import { saveNewGroup } from './contactLogic'
 import * as UI from 'solid-ui'
 import { mintNewAddressBook } from './mintNewAddressBook'
 import { renderIndividual } from './individual'
@@ -25,11 +23,12 @@ import {
   syncGroupUl, setActiveGroupButton, createGroupLi, refreshFilteredPeople,
   deselectAllPeople, handleURIsDroppedOnGroup
 } from './addressBookPresenter'
-import { alertDialog, complain, deleteThingAndDoc, setDom, setupResponsiveStacking } from './localUtils'
+import { alertDialog, complain, deleteThingAndDoc, renderDeleteButton, setupResponsiveStacking } from './localUtils'
 import * as debug from './debug'
 import './styles/contactsRDFFormsEnforced.css'
 
-import './components/add-contact-modal'
+import AddContactModal from './components/add-contact-modal'
+import NewGroupModal from './components/new-group-modal'
 
 const ns = UI.ns
 const utils = UI.utils
@@ -81,7 +80,6 @@ export default {
     const dom = dataBrowserContext.dom
     const kb = dataBrowserContext.session.store
     const div = dom.createElement('div')
-    setDom(dom) // set dom for ana error handling in other modules
 
     UI.aclControl.preventBrowserDropEvents(dom) // protect drag and drop
 
@@ -305,9 +303,7 @@ export default {
 
 // ── Helper: handle "New group" button click ──────────────────────────
 async function handleNewGroupClick (ctx) {
-  const { dom, kb, ns, book, options, selectedGroups, dataBrowserContext } = ctx
-  ctx.showDetailsSection()
-  ctx.detailsSectionContent.innerHTML = ''
+  const { kb, ns, book } = ctx
   const groupIndex = kb.any(book, ns.vcard('groupIndex'))
   try {
     await kb.fetcher.load(groupIndex)
@@ -316,17 +312,22 @@ async function handleNewGroupClick (ctx) {
   }
   debug.log(' Group index has been loaded\n')
 
-  const name = await UI.widgets.askName(
-    dom, kb, ctx.detailsSectionContent, UI.ns.foaf('name'), ns.vcard('Group'), 'group')
-  if (!name) return // cancelled by user
-  let group
-  try {
-    group = await saveNewGroup(book, name)
-  } catch (err) {
-    debug.log('Error: can\'t save new group:' + err)
-    ctx.detailsSectionContent.innerHTML = 'Failed to save group' + err
-    return
-  }
+  UI.showDialog(NewGroupModal, {
+    props: { book },
+    onClose (group) {
+      if (!group) {
+        return // cancelled by user
+      }
+
+      showNewGroup(ctx, group)
+    }
+  })
+}
+
+// ── Helper: reveal a freshly created group ───────────────────────────
+function showNewGroup (ctx, group) {
+  const { dom, kb, book, options, selectedGroups, dataBrowserContext } = ctx
+  ctx.showDetailsSection()
   for (const key in selectedGroups) delete selectedGroups[key]
   selectedGroups[group.uri] = true
 
@@ -413,10 +414,8 @@ function buildHeaderSection (ctx) {
   newContactButton.addEventListener('click', async function (_event) {
     const { book, selectedGroups } = ctx
 
-    UI.showDialog(html`<solid-contacts-pane-add-contact-modal
-        .book=${book}
-        .selectedGroups=${selectedGroups}
-      ></solid-contacts-pane-add-contact-modal>`, {
+    UI.showDialog(AddContactModal, {
+      props: { book, selectedGroups },
       onClose (person) {
         if (!person) {
           return
@@ -595,8 +594,8 @@ function buildGroupBar (ctx) {
     if (ctx.newGroupLi.parentNode) ctx.newGroupLi.parentNode.removeChild(ctx.newGroupLi)
     renderGroupButtons(book, ulGroups, options, dom, selectedGroups, ctx.ulPeople, ctx.searchInput, ctx.detailsSectionContent, ctx.dataBrowserContext, function () {
       setActiveActionButton(null)
-      // Keep the details section open when a contact or New contact form is showing
-      if (!ctx.detailsSectionContent.querySelector('.contactTypeChooser, .contactFormContainer, .renderPane')) {
+      // Keep the details section open when a contact is showing
+      if (!ctx.detailsSectionContent.querySelector('.renderPane')) {
         ctx.detailsSectionContent.innerHTML = ''
         ctx.detailsSection.classList.add('hidden')
       }
@@ -693,7 +692,7 @@ function buildFooterButtons (ctx) {
           UI.widgets.makeDropTarget(groupLi, uris => handleURIsDroppedOnGroup(uris, group))
 
           if (me) {
-            UI.widgets.deleteButtonWithCheck(
+            renderDeleteButton(
               dom,
               groupLi,
               'group ' + name,
