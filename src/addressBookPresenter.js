@@ -3,6 +3,7 @@ import * as UI from 'solid-ui'
 import { authn, store } from 'solid-logic'
 import * as debug from './debug'
 import { complain, alertDialog, getSameAs, deleteRecursive, deleteThingAndDoc, compareForSort, nameFor } from './localUtils'
+import { renderDeleteButton } from './components/delete-button'
 import { groupMembership } from './groupMembershipControl'
 
 const ns = UI.ns
@@ -12,57 +13,36 @@ let dom
 let selectedGroups = {}
 let selectedPeople = {}
 let ulPeople = null
-let ulGroups = null
 let searchInput = null
 let cardMain = null
 let book = null
 let dataBrowserContext = null
-let onGroupButtonClick = null
 
 // ######## Group presenter
 
-export function setActiveGroupButton (groupsUl, activeBtn) {
-  groupsUl.querySelectorAll('button').forEach(btn => {
-    btn.classList.remove('btn-primary', 'allGroupsButton--selected', 'allGroupsButton--active', 'allGroupsButton--loaded')
-    btn.classList.add('btn-secondary')
-  })
-  if (activeBtn) {
-    activeBtn.classList.remove('btn-secondary')
-    activeBtn.classList.add('btn-primary')
-  }
-}
-
-export function renderGroupButtons (currentBook, groupsUl, options, domElement, groupsSelected, peopleUl, searchEl, cardMainEl, context, groupClickCallback) {
-  dom = domElement
-  selectedGroups = groupsSelected || {}
+/** Point the presenter at the current address book and its shared elements.
+ * The group bar renders itself now, so this only wires up the module state the
+ * people list and its helpers still read.
+ */
+export function configureAddressBook ({ book: currentBook, dom: domElement, selectedGroups: groupsSelected, ulPeople: peopleUl, searchInput: searchEl, cardMain: cardMainEl, dataBrowserContext: context }) {
+  if (domElement) dom = domElement
+  if (groupsSelected) selectedGroups = groupsSelected
   if (peopleUl) ulPeople = peopleUl
   if (searchEl) searchInput = searchEl
   if (cardMainEl) cardMain = cardMainEl
   if (context) dataBrowserContext = context
-  if (groupClickCallback) onGroupButtonClick = groupClickCallback
   book = currentBook
-  ulGroups = groupsUl
-  const groups = groupsInOrder(book, options)
-  utils.syncTableToArrayReOrdered(ulGroups, groups, renderGroupLi)
 }
 
-/** Create the common DOM structure for a group list item (li + button).
- * Returns { groupLi, groupButton, name } so callers can attach their own handlers.
+/** How many contacts a group holds, or null while its document is unread.
+ * An empty group still describes itself (type, fn), so "no statements at all"
+ * is a reliable stand-in for "not fetched yet" -- and lets us show nothing
+ * rather than a misleading 0.
  */
-export function createGroupLi (group) {
-  const name = kb.any(group, ns.vcard('fn'))
-  const groupLi = dom.createElement('li')
-  groupLi.setAttribute('role', 'listitem')
-  groupLi.setAttribute('aria-label', name ? name.value : 'Some group')
-  groupLi.subject = group
-  UI.widgets.makeDraggable(groupLi, group)
+export function groupMemberCount (group) {
+  const loaded = kb.statementsMatching(null, null, null, group.doc()).length > 0
 
-  const groupButton = groupLi.appendChild(dom.createElement('button'))
-  groupButton.setAttribute('type', 'button')
-  groupButton.innerHTML = name ? name.value : 'Some group'
-  groupButton.classList.add('allGroupsButton', 'actionButton', 'btn-secondary', 'action-button-focus')
-
-  return { groupLi, groupButton, name }
+  return loaded ? groupMembers(kb, group).length : null
 }
 
 export async function handleURIsDroppedOnGroup (uris, group) {
@@ -78,33 +58,10 @@ export async function handleURIsDroppedOnGroup (uris, group) {
   }
 }
 
-function renderGroupLi (group) {
-  function groupLiClickListener (event) {
-    event.preventDefault()
-    setActiveGroupButton(ulGroups, groupButton)
-    if (onGroupButtonClick) onGroupButtonClick()
-    if (!event.metaKey) {
-      for (const key in selectedGroups) delete selectedGroups[key] // If Command key pressed, accumulate multiple
-    }
-    selectedGroups[group.uri] = !selectedGroups[group.uri]
-    refreshThingsSelected(ulGroups, selectedGroups)
-    // Load group members and refresh people list
-    kb.fetcher.nowOrWhenFetched(group.doc(), undefined, function (ok, message) {
-      if (!ok) {
-        debug.error('Cannot load one group: ' + group + '. Stack: ' + message)
-      }
-      refreshNames(ulPeople, null, false)
-    })
-  }
-
-  const { groupLi, groupButton } = createGroupLi(group)
-
-  groupButton.addEventListener('click', groupLiClickListener, false)
-  UI.widgets.makeDropTarget(groupLi, uris => handleURIsDroppedOnGroup(uris, group))
-  groupLi.addEventListener('click', groupLiClickListener, true)
-  return groupLi
-} // renderGroupLi
-
+/** Load and select every group listed in a container whose rows carry `.subject`.
+ * The group bar renders itself and selects groups directly; this remains for
+ * toolsPane, which drives a table of its own.
+ */
 export function selectAllGroups (
   selectedGroups,
   ulGroups,
@@ -129,7 +86,6 @@ export function selectAllGroups (
         groupLi.setAttribute('aria-busy', 'false')
         groupLi.classList.add('selected')
         selectedGroups[group.uri] = true
-        refreshThingsSelected(ulGroups, selectedGroups)
         refreshNames(ulPeople, null) // @@ every time??
         if (callbackFunction) callbackFunction(true)
         resolve(true)
@@ -148,30 +104,7 @@ export function selectAllGroups (
   } // for each row
 }
 
-export function refreshThingsSelected (ul, selectionArray) {
-  for (let i = 0; i < ul.children.length; i++) {
-    const li = ul.children[i]
-    if (li.subject) {
-      li.classList.toggle('selected', !!selectionArray[li.subject.uri])
-    }
-  }
-}
-
-export function syncGroupUl (book, options, groupsUl, domElement, groupsSelected, peopleUl, searchEl) {
-  dom = domElement
-  if (groupsSelected) selectedGroups = groupsSelected
-  if (peopleUl) ulPeople = peopleUl
-  if (searchEl) searchInput = searchEl
-  ulGroups = groupsUl
-  const groups = groupsInOrder(book, options)
-  if (groups.length > 0) {
-    renderGroupLi(groups[0]) // pre-render one to get the style right, then throw it away
-  }
-  utils.syncTableToArrayReOrdered(groupsUl, groups, renderGroupLi)
-  // refreshThingsSelected(groupsUl, selectedGroups)
-}
-
-function groupsInOrder (book, options) {
+export function groupsInOrder (book, options) {
   let sortMe = []
   if (options.foreignGroup) {
     sortMe.push([
@@ -386,7 +319,7 @@ export function selectPerson (ulPeople, person, detailsView) {
 
     if (authn.currentUser()) {
       // Add in a delete button to delete from AB
-      const deleteButton = UI.widgets.deleteButtonWithCheck(
+      const deleteButton = renderDeleteButton(
         dom,
         toolbar, // appends it to toolbar.appendChild(deleteButton)
         'contact',
@@ -395,31 +328,39 @@ export function selectPerson (ulPeople, person, detailsView) {
 
           const pname = kb.any(person, ns.vcard('fn'))
           debug.log('We are about to delete the contact ' + pname)
-          await loadAllGroups() // need to wait for all groups to be loaded in case they have a link to this person
-          // load people.ttl
-          const nameEmailIndex = kb.any(book, ns.vcard('nameEmailIndex'))
-          await kb.fetcher.load(nameEmailIndex)
 
           //  - delete person's WebID's in each Group
           //  - delete the references to it in group files and save them back
           //  - delete the reference in people.ttl and save it back
 
-          // find all Groups
-          const groups = groupMembership(person)
           let removeFromGroups = []
-          // find person WebID's
-          groups.forEach(group => {
-            const webids = getSameAs(kb, person, group.doc())
-            // for each check in each Group that it is not used by an other person then delete
-            webids.forEach(webid => {
-              if (getSameAs(kb, webid, group.doc()).length === 1) {
-                removeFromGroups = removeFromGroups.concat(kb.statementsMatching(group, ns.vcard('hasMember'), webid, group.doc()))
-              }
-            })
-          })
+          try {
+            await loadAllGroups() // need to wait for all groups to be loaded in case they have a link to this person
+            // load people.ttl
+            const nameEmailIndex = kb.any(book, ns.vcard('nameEmailIndex'))
+            await kb.fetcher.load(nameEmailIndex)
 
-          // Only if folder deletion succeeds, proceed with person deletion
-          await kb.updater.updateMany(removeFromGroups)
+            // find all Groups
+            const groups = groupMembership(person)
+            // find person WebID's
+            groups.forEach(group => {
+              const webids = getSameAs(kb, person, group.doc())
+              // for each check in each Group that it is not used by an other person then delete
+              webids.forEach(webid => {
+                if (getSameAs(kb, webid, group.doc()).length === 1) {
+                  removeFromGroups = removeFromGroups.concat(kb.statementsMatching(group, ns.vcard('hasMember'), webid, group.doc()))
+                }
+              })
+            })
+
+            // Only if folder deletion succeeds, proceed with person deletion
+            await kb.updater.updateMany(removeFromGroups)
+          } catch (err) {
+            // Without this the handler rejected silently and nothing at all happened
+            debug.error('Error removing contact from its groups. Stack: ' + err)
+            complain(detailsView, dom, 'Failed to remove the contact from its groups. If it persists, contact your admin.')
+            return
+          }
 
           try {
             await deleteThingAndDoc(person)
@@ -515,14 +456,15 @@ export async function checkDataModel (book, detailsSectionContent) {
 
     if (authn.currentUser()) {
       if (del.length) {
-        UI.widgets.deleteButtonWithCheck(
+        renderDeleteButton(
           dom,
           detailsSectionContent, // where it appends it to
           'contact',
           async function () {
             await kb.updater.updateMany(del, ins)
             debug.log('Deleted ' + del.length + ' bad statements from groups')
-          })
+          },
+          { message: 'Clean up ' + del.length + ' bad statement(s) in the group files?' })
       }
     }
   }

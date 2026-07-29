@@ -13,6 +13,28 @@
   background-color: var(--color-info-bg) !important;
 }
 
+.contactPane {
+  background-color: var(--solid-ui-color-white);
+}
+/* Right of the address book: one shared title bar over a row of two columns. */
+.contactPane .contentArea {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.contactPane .contentColumns {
+  display: flex;
+  flex-wrap: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.contactPane .peopleSection,
 .contactPane .detailSection,
 .contactPane .addressBookSection {
   display: flex;
@@ -126,31 +148,11 @@
   float: none; /* important: prevents overlap behavior */
 }
 
-/* ── "All" groups button ─────────────────────────────────────── */
-
-.contactPane .allGroupsButton {
-  margin-left: var(--spacing-md);
-  font-size: var(--font-size-base);
-}
-
-.contactPane .allGroupsButton--loading {
-  background-color: var(--color-primary);
-}
-
-.contactPane .allGroupsButton--active {
-  background-color: var(--color-primary);
-  color: var(--color-background);
-}
-
-.contactPane .allGroupsButton--loaded {
-  background-color: var(--color-primary);
-}
-
-/* ── Mint new address book ───────────────────────────────────── */
-
 .contactPane .claimSuccess {
   font-size: var(--font-size-xl);
 }
+
+/* .contentHeader moved into components/address-book-header, which renders it. */
 
 .contactPane {
   display: flex;
@@ -185,6 +187,12 @@
   overflow-x: hidden !important;
 }
 
+.contactPane.contactPane--narrow .contentColumns {
+  flex-direction: column !important;
+}
+
+.contactPane.contactPane--narrow .contentArea,
+.contactPane.contactPane--narrow .peopleSection,
 .contactPane.contactPane--narrow .addressBookSection,
 .contactPane.contactPane--narrow .detailSection {
   flex: 1 1 100% !important;
@@ -206,6 +214,12 @@
     height: auto !important;
   }
 
+  .contactPane .contentColumns {
+    flex-direction: column !important;
+  }
+
+  .contactPane .contentArea,
+  .contactPane .peopleSection,
   .contactPane .addressBookSection,
   .contactPane .detailSection {
     order: initial !important;
@@ -278,13 +292,16 @@
   }
 }
 
+.contactPane .addressBookSection {
+  max-width: 232px;
+}
 
 /* Card Section Background */
 .contactPane .addressBookSection.section-bg {
-  background: var(--color-section-bg);
-  padding: var(--spacing-md);
+  background: var(--solid-ui-color-white);
+  padding: 0;
   box-sizing: border-box;
-  border: none !important;
+  border-right: 1px solid var(--solid-ui-color-gray-200);
   border-radius: 0 !important;
 }
 
@@ -294,6 +311,7 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
+  border-left: 1px solid var(--solid-ui-color-gray-200);
 }
 
 .contactPane .detailsSectionContent {
@@ -309,7 +327,7 @@
 .contactPane .buttonSection {
   display: flex;
   flex-wrap: nowrap;
-  align-items: center;
+  flex-direction: column;
   padding: var(--spacing-sm);
   padding-bottom: 0;
   overflow-x: auto;
@@ -348,15 +366,14 @@
 
 .contactPane .groupButtonsList {
   display: flex;
+  flex-direction: column;
   flex-wrap: nowrap;
-  align-items: center;
+  align-items: stretch;
   gap: var(--spacing-xs);
   list-style: none;
 }
 
 .contactPane .buttonSection .groupButtonsList {
-  margin-left: var(--spacing-xs);
-  margin-right: var(--spacing-xs);
   padding-left: 0;
 }
 
@@ -369,6 +386,27 @@
   flex-shrink: 0;
   min-width: max-content;
   margin-left: 0;
+  display: flex;
+  align-items: center;
+  /* Stacked items are full width, so push the count to the trailing edge. */
+  justify-content: space-between;
+  width: 100%;
+  gap: var(--spacing-xs);
+}
+
+/* Contact count badge on a group button. Stays empty until the group's
+   document has loaded, so it never shows a misleading 0. */
+.contactPane .groupButtonsList .groupCount:not(:empty) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  padding: 0 0.4em;
+  border-radius: var(--border-radius-full);
+  background: var(--solid-ui-color-white);
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
 }
 
 /* Groups list in details section — flexible 2-column grid */
@@ -480,34 +518,8 @@
   color: var(--color-background);
 }
 
-/* ── Header section ──────────────────────────────────────────── */
-
-.contactPane .headerSection {
-  background: var(--color-background);
-  padding: var(--spacing-sm);
-  border-top-left-radius: var(--border-radius-full);
-  border-top-right-radius: var(--border-radius-full);
-  margin-bottom: 0;
-}
-
-.contactPane .headerSection header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0;
-}
-
-.contactPane .headerSection h2 {
-  margin-bottom: 0;
-}
-
-/* ── Dotted horizontal rule ─────────────────────────────────── */
-
-.contactPane .dottedHr {
-  border: none;
-  border-top: var(--border-width-sm, 0.1rem) dotted var(--color-text-muted);
-  margin: 0;
-}
+/* The header section lives in components/address-book-header, and is styled
+   there -- shadow DOM keeps these rules from reaching it. */
 
 /* ── Search section ─────────────────────────────────────────── */
 
@@ -519,11 +531,17 @@
 
 /* ── People list section ────────────────────────────────────── */
 
+/* The people column: header, search box, then the list itself. */
 .contactPane .peopleSection {
-  display: flex;
-  background: var(--color-background);
-  border-top: 1px dotted var(--color-text-muted);
+  background: var(--solid-ui-color-white);
   margin-bottom: 0;
+}
+
+/* Only the list scrolls; the header and search stay put. */
+.contactPane .peopleSection > ul {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .contactPane .peopleSection ul {
@@ -536,7 +554,6 @@
 }
 
 .contactPane .peopleSection li {
-  border-top: var(--border-width-sm, 0.1rem) solid var(--color-border-pale);
   padding: var(--spacing-xs);
 }
 

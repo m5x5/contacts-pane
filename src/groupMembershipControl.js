@@ -4,6 +4,7 @@ import { store, authn } from 'solid-logic'
 import './styles/groupMembership.css'
 import * as debug from './debug'
 import { normalizeGroupUri, confirmDialog, alertDialog } from './localUtils'
+import { renderDeleteButton } from './components/delete-button'
 import { refreshNames } from './addressBookPresenter'
 import { vcardWebIDs } from './webidControl'
 
@@ -117,7 +118,7 @@ export async function renderGroupMemberships (person, context, ulPeople) {
 
     if (authn.currentUser()) {
       // Delete button
-      UI.widgets.deleteButtonWithCheck(
+      renderDeleteButton(
         dom,
         toolbar,
         'membership in ' + label,
@@ -125,7 +126,10 @@ export async function renderGroupMemberships (person, context, ulPeople) {
           // async operation handles its own refresh once the group doc has
           // been reloaded
           await removeFromGroup(person, group)
-        }
+        },
+        // removeFromGroup checks the contact would still belong to a group and
+        // asks for confirmation itself, naming both the contact and the group.
+        { confirm: false }
       )
     }
 

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { alertDialog, confirmDialog } from '../../src/localUtils'
+import { renderDeleteButton } from '../../src/components/delete-button'
 
 import 'solid-ui/components/dialogs-root'
 
@@ -133,5 +134,72 @@ describe('modal dialog helpers', () => {
 
     footerButtons()[1].click() // OK
     await expect(confirmed).resolves.toBe(true)
+  })
+})
+
+describe('renderDeleteButton', () => {
+  let container: HTMLElement
+
+  beforeEach(async () => {
+    document.body.innerHTML = '<solid-ui-dialogs-root></solid-ui-dialogs-root><div id="container"></div>'
+    container = document.getElementById('container') as HTMLElement
+
+    await settle()
+  })
+
+  test('deletes once the confirmation is accepted', async () => {
+    let deleted = false
+    const button = renderDeleteButton(document, container, 'contact', () => { deleted = true })
+
+    button.click()
+    await settle()
+
+    expect(deepQuery(document.body, 'solid-contacts-pane-confirm-modal')).not.toBeNull()
+    expect(deleted).toBe(false) // nothing happens until the user agrees
+
+    footerButtons()[1].click() // OK
+    await settle()
+
+    expect(deleted).toBe(true)
+  })
+
+  test('does not delete when the confirmation is cancelled', async () => {
+    let deleted = false
+    const button = renderDeleteButton(document, container, 'contact', () => { deleted = true })
+
+    button.click()
+    await settle()
+
+    footerButtons()[0].click() // Cancel
+    await settle()
+
+    expect(deleted).toBe(false)
+  })
+
+  test('skips its own confirmation when the caller opts out', async () => {
+    let deleted = false
+    const button = renderDeleteButton(document, container, 'membership', () => { deleted = true }, { confirm: false })
+
+    button.click()
+    await settle()
+
+    expect(deepQuery(document.body, 'solid-contacts-pane-confirm-modal')).toBeNull()
+    expect(deleted).toBe(true)
+  })
+
+  test('reports a failing delete instead of rejecting silently', async () => {
+    const button = renderDeleteButton(document, container, 'contact', () => {
+      throw new Error('nope')
+    })
+
+    button.click()
+    await settle()
+
+    footerButtons()[1].click() // OK
+    await settle()
+
+    const alert = deepQuery(document.body, 'solid-contacts-pane-alert-modal')
+    expect(alert).not.toBeNull()
+    expect(deepQuery(document.body, 'solid-ui-dialog-content')?.textContent).toContain('Failed to delete contact')
   })
 })

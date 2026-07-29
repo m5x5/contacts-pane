@@ -18,17 +18,17 @@ import { toolsPane } from './toolsPane'
 import './styles/utilities.css'
 import './styles/contactsPane.css'
 import {
-  checkDataModel, renderGroupButtons,
-  refreshThingsSelected, refreshNames, selectAllGroups, loadAllGroups,
-  syncGroupUl, setActiveGroupButton, createGroupLi, refreshFilteredPeople,
-  deselectAllPeople, handleURIsDroppedOnGroup
+  checkDataModel, configureAddressBook, refreshNames, selectAllGroups,
+  refreshFilteredPeople, deselectAllPeople
 } from './addressBookPresenter'
-import { alertDialog, complain, deleteThingAndDoc, renderDeleteButton, setupResponsiveStacking } from './localUtils'
+import { alertDialog, complain, confirmDialog, deleteThingAndDoc, setupResponsiveStacking } from './localUtils'
 import * as debug from './debug'
 import './styles/contactsRDFFormsEnforced.css'
 
-import AddContactModal from './components/add-contact-modal'
 import NewGroupModal from './components/new-group-modal'
+import SharingModal from './components/sharing-modal'
+import './components/address-book-header'
+import './components/group-bar'
 
 const ns = UI.ns
 const utils = UI.utils
@@ -181,20 +181,10 @@ export default {
         const selectedGroups = {}
         let selectedPeople = {} // Actually prob max 1
 
-        let allGroupsLi = null
-        let newGroupLi = null
-
-        // Centralized active-button tracking across all action buttons
-        const actionButtons = []
-        function setActiveActionButton (activeBtn) {
-          actionButtons.forEach(btn => {
-            btn.classList.remove('btn-primary')
-            btn.classList.add('btn-secondary')
-          })
-          if (activeBtn) {
-            activeBtn.classList.remove('btn-secondary')
-            activeBtn.classList.add('btn-primary')
-          }
+        // The Sharing / Tools buttons live in the header and track their own
+        // highlight; this just tells them to drop it.
+        function setActiveActionButton (active) {
+          if (!active && ctx.headerSection) ctx.headerSection.clearActiveAction()
         }
 
         // Shared context passed to all builder functions
@@ -209,11 +199,6 @@ export default {
           selectedGroups,
           get selectedPeople () { return selectedPeople },
           set selectedPeople (v) { selectedPeople = v },
-          get allGroupsLi () { return allGroupsLi },
-          set allGroupsLi (v) { allGroupsLi = v },
-          get newGroupLi () { return newGroupLi },
-          set newGroupLi (v) { newGroupLi = v },
-          actionButtons,
           setActiveActionButton,
           dataBrowserContext,
           div,
@@ -223,7 +208,7 @@ export default {
         }
 
         // ── Build layout ────────────────────────────────────────────
-        const { main, addressBookSection, detailsSection } = buildMainLayout(ctx)
+        const { main, contentArea, peopleSection, addressBookSection, detailsSection } = buildMainLayout(ctx)
         div.appendChild(main)
 
         function showDetailsSection () {
@@ -249,36 +234,37 @@ export default {
         detailsSectionContent.setAttribute('aria-live', 'polite')
         ctx.detailsSectionContent = detailsSectionContent
 
-        // ── Header (title + New Contact button) ─────────────────────
+        // ── Title bar, spanning the people list and the contact detail ──
         const headerSection = buildHeaderSection(ctx)
-        addressBookSection.appendChild(headerSection)
+        contentArea.insertBefore(headerSection, contentArea.firstChild)
 
-        const dottedHr = dom.createElement('hr')
-        dottedHr.classList.add('dottedHr')
-        addressBookSection.appendChild(dottedHr)
+        // ── People column: search, then the people themselves ──────────
 
-        // ── Search ──────────────────────────────────────────────────
         const { searchSection, searchInput } = buildSearchSection(ctx)
         ctx.searchInput = searchInput
-        addressBookSection.appendChild(searchSection)
+        peopleSection.appendChild(searchSection)
+
+        peopleSection.appendChild(ulPeople)
+
+        // The people list and its helpers read these; the group bar renders
+        // itself and no longer passes them in on every call.
+        configureAddressBook({
+          book,
+          dom,
+          selectedGroups,
+          ulPeople,
+          searchInput,
+          cardMain: detailsSectionContent,
+          dataBrowserContext
+        })
 
         // ── Group bar ───────────────────────────────────────────────
-        const { buttonSection, ulGroups } = buildGroupBar(ctx)
-        ctx.ulGroups = ulGroups
+        const { buttonSection } = buildGroupBar(ctx)
+        ctx.groupBar = buttonSection
         addressBookSection.appendChild(buttonSection)
-
-        // ── People list ─────────────────────────────────────────────
-        const peopleListSection = dom.createElement('section')
-        peopleListSection.classList.add('peopleSection')
-        addressBookSection.appendChild(peopleListSection)
-        peopleListSection.appendChild(ulPeople)
 
         // ── Details content section ─────────────────────────────────
         detailsSection.appendChild(detailsSectionContent)
-
-        // ── Footer buttons ──────────────────────────────────────────
-        const cardFooter = buildFooterButtons(ctx)
-        addressBookSection.appendChild(cardFooter)
 
         checkDataModel(book, detailsSectionContent).then(() => { debug.log('Async checkDataModel done.') })
       }
@@ -326,23 +312,14 @@ async function handleNewGroupClick (ctx) {
 
 // ── Helper: reveal a freshly created group ───────────────────────────
 function showNewGroup (ctx, group) {
-  const { dom, kb, book, options, selectedGroups, dataBrowserContext } = ctx
+  const { kb, selectedGroups, dataBrowserContext } = ctx
   ctx.showDetailsSection()
   for (const key in selectedGroups) delete selectedGroups[key]
   selectedGroups[group.uri] = true
 
   // Refresh the group buttons list
-  const allGroupsLi = ctx.allGroupsLi
-  const newGroupLi = ctx.newGroupLi
-  if (allGroupsLi.parentNode) allGroupsLi.parentNode.removeChild(allGroupsLi)
-  if (newGroupLi.parentNode) newGroupLi.parentNode.removeChild(newGroupLi)
-  syncGroupUl(book, options, ctx.ulGroups, dom, selectedGroups, ctx.ulPeople, ctx.searchInput)
-  ctx.ulGroups.insertBefore(allGroupsLi, ctx.ulGroups.firstChild)
-  ctx.ulGroups.appendChild(newGroupLi)
-  refreshThingsSelected(ctx.ulGroups, selectedGroups)
-  // Highlight the new group button in ulGroups and show empty people list
-  const matchingLi = Array.from(ctx.ulGroups.children).find(li => li.subject && li.subject.uri === group.uri)
-  setActiveGroupButton(ctx.ulGroups, matchingLi ? matchingLi.querySelector('button') : null)
+  ctx.groupBar.refresh()
+  syncHeaderToSelection(ctx)
   refreshNames(ctx.ulPeople, null, false)
 
   ctx.detailsSectionContent.innerHTML = ''
@@ -373,73 +350,113 @@ function buildMainLayout (ctx) {
   addressBookSection.setAttribute('tabindex', '-1')
   main.appendChild(addressBookSection)
 
+  // Everything right of the address book shares one title bar, so the header
+  // spans the people list and the contact detail rather than being squeezed
+  // into the people column on its own.
+  const contentArea = dom.createElement('div')
+  contentArea.classList.add('contentArea')
+  main.appendChild(contentArea)
+
+  // The title bar itself is appended here by the caller; the .contentHeader
+  // wrapper is part of the component's own template.
+  const contentColumns = dom.createElement('div')
+  contentColumns.classList.add('contentColumns')
+  contentArea.appendChild(contentColumns)
+
+  const peopleSection = dom.createElement('section')
+  peopleSection.classList.add('peopleSection')
+  peopleSection.setAttribute('role', 'region')
+  peopleSection.setAttribute('aria-label', 'People')
+  contentColumns.appendChild(peopleSection)
+
   const detailsSection = dom.createElement('section')
   detailsSection.classList.add('detailSection')
   detailsSection.setAttribute('role', 'region')
   detailsSection.setAttribute('aria-label', 'Details section')
   detailsSection.classList.add('hidden')
-  main.appendChild(detailsSection)
+  contentColumns.appendChild(detailsSection)
 
-  return { main, addressBookSection, detailsSection }
+  return { main, contentArea, peopleSection, addressBookSection, detailsSection }
 }
 
 // ── Builder: header with title and New Contact button ────────────────
+// TODO we should also show whether the address book is public or private
 function buildHeaderSection (ctx) {
-  const { dom, title, me, setMe } = ctx
+  const { dom, book, selectedGroups, setMe } = ctx
 
-  const headerSection = dom.createElement('section')
-  headerSection.classList.add('headerSection')
+  const headerSection = dom.createElement('solid-contacts-pane-address-book-header')
+  headerSection.book = book
+  headerSection.selectedGroups = selectedGroups
 
-  const header = dom.createElement('header')
-  header.classList.add('mb-md')
-  const h2 = dom.createElement('h2')
-  h2.id = 'addressBook-heading'
-  h2.setAttribute('tabindex', '-1')
-  h2.textContent = title
+  headerSection.addEventListener('user-resolved', event => setMe(event.detail.webId))
+  headerSection.addEventListener('contact-added', event => showNewContact(ctx, event.detail.person))
+  headerSection.addEventListener('delete-group-requested', () => deleteSelectedGroup(ctx))
+  headerSection.addEventListener('sharing-requested', () => showSharing(ctx))
+  headerSection.addEventListener('tools-requested', () => showTools(ctx))
 
-  // New Contact button
-  const newContactButton = dom.createElement('button')
-  const container = dom.createElement('div')
-  newContactButton.setAttribute('type', 'button')
-  if (!me) newContactButton.setAttribute('disabled', 'true')
-  authn.checkUser().then(webId => {
-    if (webId) {
-      setMe(webId)
-      newContactButton.removeAttribute('disabled')
-    }
-  })
-  container.appendChild(newContactButton)
-  newContactButton.innerHTML = '+ New contact'
-  newContactButton.classList.add('actionButton', 'btn-primary', 'action-button-focus')
-  newContactButton.addEventListener('click', async function (_event) {
-    const { book, selectedGroups } = ctx
+  ctx.headerSection = headerSection
 
-    UI.showDialog(AddContactModal, {
-      props: { book, selectedGroups },
-      onClose (person) {
-        if (!person) {
-          return
-        }
-
-        const { dataBrowserContext } = ctx
-        ctx.selectedPeople = {}
-        ctx.selectedPeople[person.uri] = true
-        refreshNames(ctx.ulPeople, null) // Add name to list of group
-        ctx.detailsSectionContent.innerHTML = '' // Clear 'indexing'
-        ctx.detailsSectionContent.classList.add('detailsSectionContent--wide')
-        const contactPane = dataBrowserContext.session.paneRegistry.byName('contact')
-        const paneDiv = contactPane.render(person, dataBrowserContext)
-        paneDiv.classList.add('renderPane')
-        ctx.detailsSectionContent.appendChild(paneDiv)
-      }
-    })
-  }, false)
-
-  // TODO we should also add if it is public or private
-  header.appendChild(h2)
-  header.appendChild(container)
-  headerSection.appendChild(header)
   return headerSection
+}
+
+/** The one group in view, or null when showing all of them (or none). */
+function soleSelectedGroup (ctx) {
+  const uris = Object.keys(ctx.selectedGroups).filter(uri => ctx.selectedGroups[uri])
+  const groupCount = ctx.groupBar ? ctx.groupBar.groupCount : 0
+
+  // "All groups" selects everything, which is not the same as picking one.
+  if (uris.length !== 1 || groupCount <= 1) return null
+
+  return ctx.kb.sym(uris[0])
+}
+
+/** Keep the header's title and its Delete Group button in step with the bar. */
+function syncHeaderToSelection (ctx) {
+  if (!ctx.headerSection) return
+
+  const group = soleSelectedGroup(ctx)
+  const name = group && ctx.kb.any(group, ns.vcard('fn'))
+
+  ctx.headerSection.selectedGroupName = name ? name.value : null
+}
+
+async function deleteSelectedGroup (ctx) {
+  const { selectedGroups } = ctx
+  const group = soleSelectedGroup(ctx)
+  if (!group) return
+
+  const name = ctx.kb.any(group, ns.vcard('fn'))
+  const label = name ? name.value : 'this group'
+
+  if (!(await confirmDialog(`Really delete the group ${label}?`))) return
+
+  try {
+    await deleteThingAndDoc(group)
+  } catch (err) {
+    debug.error('Error deleting group. Stack: ' + err)
+    alertDialog('Failed to delete the group. If it persists, contact your admin.')
+    return
+  }
+
+  delete selectedGroups[group.uri]
+  ctx.groupBar.refresh()
+  syncHeaderToSelection(ctx)
+  refreshNames(ctx.ulPeople, null, false)
+}
+
+// ── Helper: reveal a freshly created contact ─────────────────────────
+function showNewContact (ctx, person) {
+  const { dataBrowserContext } = ctx
+
+  ctx.selectedPeople = {}
+  ctx.selectedPeople[person.uri] = true
+  refreshNames(ctx.ulPeople, null) // Add name to list of group
+  ctx.detailsSectionContent.innerHTML = '' // Clear 'indexing'
+  ctx.detailsSectionContent.classList.add('detailsSectionContent--wide')
+  const contactPane = dataBrowserContext.session.paneRegistry.byName('contact')
+  const paneDiv = contactPane.render(person, dataBrowserContext)
+  paneDiv.classList.add('renderPane')
+  ctx.detailsSectionContent.appendChild(paneDiv)
 }
 
 // ── Builder: search input section ────────────────────────────────────
@@ -486,81 +503,34 @@ function buildSearchSection (ctx) {
 
 // ── Builder: group buttons bar ───────────────────────────────────────
 function buildGroupBar (ctx) {
-  const {
-    dom, kb, book, options, groupIndex, selectedGroups,
-    actionButtons, setActiveActionButton
-  } = ctx
+  const { dom, kb, book, options, groupIndex, selectedGroups, setActiveActionButton } = ctx
 
-  const buttonSection = dom.createElement('section')
+  const buttonSection = dom.createElement('solid-contacts-pane-group-bar')
   buttonSection.classList.add('buttonSection')
+  buttonSection.book = book
+  buttonSection.options = options
+  buttonSection.selectedGroups = selectedGroups
 
-  const ulGroups = dom.createElement('ul')
-  ulGroups.classList.add('groupButtonsList')
-  ulGroups.setAttribute('role', 'list')
-  ulGroups.setAttribute('aria-label', 'Groups list')
+  buttonSection.addEventListener('selection-changed', () => {
+    syncHeaderToSelection(ctx)
+    setActiveActionButton(null)
+    // Keep the details section open when a contact is showing
+    if (!ctx.detailsSectionContent.querySelector('.renderPane')) {
+      ctx.detailsSectionContent.innerHTML = ''
+      ctx.detailsSection.classList.add('hidden')
+    }
+  })
+  buttonSection.addEventListener('new-group-requested', () => {
+    setActiveActionButton(null)
+    deselectAllPeople(ctx.ulPeople)
+    handleNewGroupClick(ctx)
+  })
 
   if (options.foreignGroup) {
     selectedGroups[options.foreignGroup.uri] = true
   }
 
   if (book) {
-    // All groups button — leftmost, initially selected
-    ctx.allGroupsLi = dom.createElement('li')
-    const allGroupsButton = dom.createElement('button')
-    allGroupsButton.textContent = 'All groups'
-    allGroupsButton.classList.add('allGroupsButton', 'actionButton', 'btn-primary', 'action-button-focus', 'allGroupsButton--selected')
-    allGroupsButton.addEventListener('click', function (_event) {
-      setActiveGroupButton(ulGroups, allGroupsButton)
-      setActiveActionButton(null)
-      // Check if all groups are currently selected
-      const allSelected = Array.from(ulGroups.children).every(function (li) {
-        if (!li.subject) return true // skip non-group items (All groups, New group)
-        return !!selectedGroups[li.subject.uri]
-      })
-
-      if (!allSelected) {
-        allGroupsButton.classList.add('allGroupsButton--loading')
-        allGroupsButton.setAttribute('aria-busy', 'true')
-        selectAllGroups(selectedGroups, ulGroups, function (ok, message) {
-          if (!ok) return alertDialog('Failed to select all groups. If it persists, contact admin.')
-          allGroupsButton.classList.remove('allGroupsButton--loading')
-          allGroupsButton.setAttribute('aria-busy', 'false')
-          allGroupsButton.classList.add('allGroupsButton--active')
-          refreshThingsSelected(ulGroups, selectedGroups)
-          refreshNames(ctx.ulPeople, null)
-        })
-      } else {
-        allGroupsButton.classList.remove('allGroupsButton--loading', 'allGroupsButton--active')
-        allGroupsButton.setAttribute('aria-busy', 'false')
-        allGroupsButton.classList.add('allGroupsButton--loaded') // pale green hint groups loaded
-        for (const key in selectedGroups) delete selectedGroups[key]
-        refreshThingsSelected(ulGroups, selectedGroups)
-      }
-    }) // on button click
-    ctx.allGroupsLi.appendChild(allGroupsButton)
-    ulGroups.appendChild(ctx.allGroupsLi) // First item in the list
-
-    // New group button — rightmost (appended after group buttons are rendered)
-    ctx.newGroupLi = dom.createElement('li')
-    const newGroupButton = dom.createElement('button')
-    newGroupButton.setAttribute('type', 'button')
-    newGroupButton.innerHTML = '+ New group'
-    newGroupButton.classList.add('allGroupsButton', 'actionButton', 'btn-secondary', 'action-button-focus')
-    actionButtons.push(newGroupButton)
-    newGroupButton.addEventListener(
-      'click', function (event) {
-        setActiveGroupButton(ulGroups, newGroupButton)
-        setActiveActionButton(null)
-        deselectAllPeople(ctx.ulPeople)
-        handleNewGroupClick(ctx)
-      },
-      false
-    )
-    ctx.newGroupLi.appendChild(newGroupButton)
-
-    // Append ulGroups to buttonSection, then add New group at the end
-    buttonSection.appendChild(ulGroups)
-
     if (groupIndex) {
       kb.fetcher.nowOrWhenFetched(groupIndex.uri, book, function (ok, body) {
         if (!ok) {
@@ -568,251 +538,87 @@ function buildGroupBar (ctx) {
           alertDialog('Error loading group index. If it persists, contact admin.')
           return
         }
-        // Remove special items before sync (syncTableToArrayReOrdered expects .subject on all children)
-        if (ctx.allGroupsLi.parentNode) ctx.allGroupsLi.parentNode.removeChild(ctx.allGroupsLi)
-        if (ctx.newGroupLi.parentNode) ctx.newGroupLi.parentNode.removeChild(ctx.newGroupLi)
-        syncGroupUl(book, options, ulGroups, dom, selectedGroups, ctx.ulPeople, ctx.searchInput) // Refresh list of groups
-        ulGroups.insertBefore(ctx.allGroupsLi, ulGroups.firstChild) // Keep All contacts first
-        ulGroups.appendChild(ctx.newGroupLi) // Keep New group last
-
-        // Auto-select all groups and display all contacts on load
-        allGroupsButton.classList.add('allGroupsButton--loading')
-        allGroupsButton.setAttribute('aria-busy', 'true')
-        selectAllGroups(selectedGroups, ulGroups, function (ok, message) {
-          if (!ok) return alertDialog('Failed to select all groups. If it persists, contact admin.')
-          allGroupsButton.classList.remove('allGroupsButton--loading')
-          allGroupsButton.setAttribute('aria-busy', 'false')
-          allGroupsButton.classList.add('allGroupsButton--active')
-          refreshThingsSelected(ulGroups, selectedGroups)
-          refreshNames(ctx.ulPeople, null)
-        })
+        buttonSection.selectAll() // Show all contacts on load
       })
     }
-
-    // Remove special items before initial render too
-    if (ctx.allGroupsLi.parentNode) ctx.allGroupsLi.parentNode.removeChild(ctx.allGroupsLi)
-    if (ctx.newGroupLi.parentNode) ctx.newGroupLi.parentNode.removeChild(ctx.newGroupLi)
-    renderGroupButtons(book, ulGroups, options, dom, selectedGroups, ctx.ulPeople, ctx.searchInput, ctx.detailsSectionContent, ctx.dataBrowserContext, function () {
-      setActiveActionButton(null)
-      // Keep the details section open when a contact is showing
-      if (!ctx.detailsSectionContent.querySelector('.renderPane')) {
-        ctx.detailsSectionContent.innerHTML = ''
-        ctx.detailsSection.classList.add('hidden')
-      }
-    })
-    ulGroups.insertBefore(ctx.allGroupsLi, ulGroups.firstChild) // Keep All contacts first
-    ulGroups.appendChild(ctx.newGroupLi) // Ensure New group is last after initial render
   } else {
-    syncGroupUl(book, options, ulGroups, dom, selectedGroups, ctx.ulPeople, ctx.searchInput) // Refresh list of groups (will be empty)
     refreshNames(ctx.ulPeople, null)
     debug.log('No book, only one group -> hide list of groups')
   } // if not book
 
-  return { buttonSection, ulGroups }
+  return { buttonSection }
 }
 
-// ── Builder: footer action buttons (Groups / Sharing / Tools) ────────
-function buildFooterButtons (ctx) {
-  const {
-    dom, kb, ns, book, options, selectedGroups,
-    actionButtons, setActiveActionButton, dataBrowserContext, div, me
-  } = ctx
+// ── Address-book-wide views, opened from the header ──────────────────
 
-  const cardFooter = dom.createElement('div')
-  cardFooter.classList.add('cardFooter')
+/** Shared preamble: clear the details pane and give it the stage. */
+function openDetailsView (ctx, { wide }) {
+  deselectAllPeople(ctx.ulPeople)
+  ctx.showDetailsSection()
+  ctx.detailsSectionContent.innerHTML = ''
+  ctx.detailsSectionContent.classList.toggle('detailsSectionContent--wide', wide)
+}
 
-  if (book) {
-    // Groups button
-    const groupsButton = cardFooter.appendChild(dom.createElement('button'))
-    groupsButton.setAttribute('type', 'button')
-    groupsButton.innerHTML = 'Groups'
-    groupsButton.classList.add('actionButton', 'btn-secondary', 'action-button-focus')
-    actionButtons.push(groupsButton)
-    groupsButton.addEventListener('click', async function (_event) {
-      setActiveActionButton(groupsButton)
-      deselectAllPeople(ctx.ulPeople)
-      ctx.showDetailsSection()
-      ctx.detailsSectionContent.innerHTML = ''
-      ctx.detailsSectionContent.classList.remove('detailsSectionContent--wide')
+function showSharing (ctx) {
+  const { dom, kb, book, dataBrowserContext, div, me } = ctx
 
-      // Header
-      const groupsHeader = dom.createElement('h3')
-      groupsHeader.textContent = 'Your groups'
-      ctx.detailsSectionContent.appendChild(groupsHeader)
+  // solid-ui builds these controls imperatively, so assemble them into a
+  // container and hand that to the dialog to slot in. It stays in the light
+  // DOM, so contactsPane.css can still reach it.
+  const content = dom.createElement('div')
+  content.classList.add('sharingControls')
 
-      let groupRemark = dom.createElement('p')
-      groupRemark.textContent = 'When you delete a group it can happen that some contacts end up groupless.'
-      ctx.detailsSectionContent.appendChild(groupRemark)
-
-      groupRemark = dom.createElement('p')
-      groupRemark.textContent = 'To move contacts around, simply drag and drop them onto a group.'
-      ctx.detailsSectionContent.appendChild(groupRemark)
-
-      // Load all groups and display them in a list
-      let groups
-      try {
-        groups = await loadAllGroups(book)
-      } catch (err) {
-        ctx.detailsSectionContent.appendChild(dom.createTextNode('Failed to load groups: ' + err))
-        return
+  content.appendChild(
+    UI.aclControl.ACLControlBox5(
+      book.dir(),
+      dataBrowserContext,
+      'book',
+      kb,
+      function (ok, body) {
+        if (!ok) {
+          debug.error('ACL control box Failed. Stack: ' + body)
+          complain(content, dom, 'Problem displaying sharing controls. If persists, contact admin.')
+        }
       }
+    )
+  )
 
-      const groupsList = dom.createElement('ul')
-      groupsList.setAttribute('role', 'list')
-      groupsList.setAttribute('aria-label', 'All groups')
-      groupsList.classList.add('groupButtonsList')
-
-      // Sort groups by name
-      if (groups) {
-        groups.sort((a, b) => {
-          const nameA = (kb.any(a, ns.vcard('fn')) || '').toString().toLowerCase()
-          const nameB = (kb.any(b, ns.vcard('fn')) || '').toString().toLowerCase()
-          return nameA < nameB ? -1 : nameA > nameB ? 1 : 0
-        })
-        groups.forEach(function (group) {
-          const { groupLi, groupButton: groupBtn, name } = createGroupLi(group)
-          groupBtn.addEventListener('click', function (event) {
-            event.preventDefault()
-            if (!event.metaKey) {
-              for (const key in selectedGroups) delete selectedGroups[key]
-            }
-            selectedGroups[group.uri] = !selectedGroups[group.uri]
-            refreshThingsSelected(ctx.ulGroups, selectedGroups)
-            // Highlight the matching group button in the sidebar ulGroups
-            const matchingLi = Array.from(ctx.ulGroups.children).find(li => li.subject && li.subject.uri === group.uri)
-            setActiveGroupButton(ctx.ulGroups, matchingLi ? matchingLi.querySelector('button') : null)
-            kb.fetcher.nowOrWhenFetched(group.doc(), undefined, function (ok, message) {
-              if (!ok) {
-                debug.error('Cannot load group: ' + group + '. Stack: ' + message)
-                return alertDialog('Failed to load group details. If it persists, contact your admin.')
-              }
-              refreshNames(ctx.ulPeople, null, false)
-            })
-          }, false)
-          UI.widgets.makeDropTarget(groupLi, uris => handleURIsDroppedOnGroup(uris, group))
-
-          if (me) {
-            renderDeleteButton(
-              dom,
-              groupLi,
-              'group ' + name,
-              async function () {
-                await deleteThingAndDoc(group)
-                delete selectedGroups[group.uri]
-                // Refresh the group buttons list
-                const allGroupsLi = ctx.allGroupsLi
-                const newGroupLi = ctx.newGroupLi
-                if (allGroupsLi.parentNode) allGroupsLi.parentNode.removeChild(allGroupsLi)
-                if (newGroupLi.parentNode) newGroupLi.parentNode.removeChild(newGroupLi)
-                syncGroupUl(book, options, ctx.ulGroups, dom, selectedGroups, ctx.ulPeople, ctx.searchInput)
-                ctx.ulGroups.insertBefore(allGroupsLi, ctx.ulGroups.firstChild)
-                ctx.ulGroups.appendChild(newGroupLi)
-                refreshThingsSelected(ctx.ulGroups, selectedGroups)
-                // Refresh the people list to reflect the deleted group
-                refreshNames(ctx.ulPeople, null, false)
-                // Refresh the groups detail view
-                groupsButton.click()
-              }
-            )
-          }
-
-          groupsList.appendChild(groupLi)
-        })
-      }
-
-      ctx.detailsSectionContent.appendChild(groupsList)
-
-      // New group button at the bottom
-      const newGroupBtn = dom.createElement('button')
-      newGroupBtn.setAttribute('type', 'button')
-      newGroupBtn.innerHTML = '+ New group'
-      newGroupBtn.classList.add('actionButton', 'btn-primary', 'action-button-focus', 'newGroupBtn')
-      newGroupBtn.addEventListener('click', function () { handleNewGroupClick(ctx) }, false)
-      ctx.detailsSectionContent.appendChild(newGroupBtn)
+  const sharingContext = {
+    target: book,
+    me,
+    noun: 'address book',
+    div: content,
+    dom,
+    statusRegion: div
+  }
+  UI.login.registrationControl(sharingContext, book, ns.vcard('AddressBook'))
+    .then(() => debug.log('Registration control finished.'))
+    .catch(e => {
+      debug.error('Error in registration control. Stack: ' + e)
+      complain(content, dom, 'Problem displaying findable controls. If persists, contact admin.')
     })
 
-    // Sharing button
-    const sharingButton = cardFooter.appendChild(dom.createElement('button'))
-    sharingButton.setAttribute('type', 'button')
-    sharingButton.innerHTML = 'Sharing'
-    sharingButton.classList.add('actionButton', 'btn-secondary', 'action-button-focus')
-    actionButtons.push(sharingButton)
-    sharingButton.addEventListener('click', function (_event) {
-      setActiveActionButton(sharingButton)
-      deselectAllPeople(ctx.ulPeople)
-      ctx.showDetailsSection()
-      ctx.detailsSectionContent.innerHTML = ''
-      ctx.detailsSectionContent.classList.remove('detailsSectionContent--wide')
+  UI.showDialog(SharingModal, { props: { content } })
+}
 
-      const sharingHeader = dom.createElement('h3')
-      sharingHeader.textContent = 'Sharing'
-      ctx.detailsSectionContent.appendChild(sharingHeader)
+function showTools (ctx) {
+  const { book, selectedGroups, dataBrowserContext, me } = ctx
 
-      ctx.detailsSectionContent.appendChild(
-        UI.aclControl.ACLControlBox5(
-          book.dir(),
-          dataBrowserContext,
-          'book',
-          kb,
-          function (ok, body) {
-            if (!ok) {
-              debug.error('ACL control box Failed. Stack: ' + body)
-              complain(ctx.detailsSectionContent, dom, 'Problem displaying sharing controls. If persists, contact admin.')
-            }
-          }
-        )
-      )
+  openDetailsView(ctx, { wide: true })
 
-      const sharingContext = {
-        target: book,
-        me,
-        noun: 'address book',
-        div: ctx.detailsSectionContent,
-        dom,
-        statusRegion: div
+  ctx.detailsSectionContent.appendChild(
+    toolsPane(
+      selectAllGroups,
+      selectedGroups,
+      null,
+      book,
+      dataBrowserContext,
+      me,
+      function refreshGroups () {
+        ctx.groupBar.refresh()
       }
-      UI.login.registrationControl(sharingContext, book, ns.vcard('AddressBook'))
-        .then(() => debug.log('Registration control finished.'))
-        .catch(e => {
-          debug.error('Error in registration control. Stack: ' + e)
-          complain(ctx.detailsSectionContent, dom, 'Problem displaying findable controls. If persists, contact admin.')
-        })
-    })
-
-    // Settings button
-    const toolsButton = cardFooter.appendChild(dom.createElement('button'))
-    toolsButton.setAttribute('type', 'button')
-    toolsButton.innerHTML = 'Tools'
-    toolsButton.classList.add('actionButton', 'btn-secondary', 'action-button-focus')
-    actionButtons.push(toolsButton)
-    toolsButton.addEventListener('click', function (_event) {
-      setActiveActionButton(toolsButton)
-      deselectAllPeople(ctx.ulPeople)
-      ctx.showDetailsSection()
-      ctx.detailsSectionContent.innerHTML = ''
-      ctx.detailsSectionContent.classList.add('detailsSectionContent--wide')
-      ctx.detailsSectionContent.appendChild(
-        toolsPane(
-          selectAllGroups,
-          selectedGroups,
-          ctx.ulGroups,
-          book,
-          dataBrowserContext,
-          me,
-          function refreshGroups () {
-            if (ctx.allGroupsLi.parentNode) ctx.allGroupsLi.parentNode.removeChild(ctx.allGroupsLi)
-            if (ctx.newGroupLi.parentNode) ctx.newGroupLi.parentNode.removeChild(ctx.newGroupLi)
-            syncGroupUl(book, options, ctx.ulGroups, dom, selectedGroups, ctx.ulPeople, ctx.searchInput)
-            ctx.ulGroups.insertBefore(ctx.allGroupsLi, ctx.ulGroups.firstChild)
-            ctx.ulGroups.appendChild(ctx.newGroupLi)
-            refreshThingsSelected(ctx.ulGroups, selectedGroups)
-          }
-        )
-      )
-    })
-  } // if book
-
-  return cardFooter
+    )
+  )
 }
 
 export { saveNewGroup, addPersonToGroup, groupMembers, saveNewContact } from './contactLogic'

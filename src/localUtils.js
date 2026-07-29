@@ -115,11 +115,9 @@ export function deleteRecursive (kb, folder) {
 // plus patch out ALL mentiosn of it!    Use with care!
 // beware of other data picked up from other places being smushed
 // together and then deleted.
+// Callers are responsible for confirming with the user first -- renderDeleteButton
+// does that -- so this deletes without asking.
 export async function deleteThingAndDoc (x) {
-  const name = nameFor(x)
-  if (!(await confirmDialog('Really DELETE ' + name + '?'))) {
-    throw new Error('User cancelled contact deletion')
-  }
   debug.log('deleteThingAndDoc - to be deleted ' + x)
   const ds = kb.statementsMatching(x).concat(kb.statementsMatching(undefined, undefined, x))
   try {
