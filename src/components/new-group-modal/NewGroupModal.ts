@@ -15,7 +15,7 @@ import styles from './NewGroupModal.styles.css'
 
 type Group = any
 
-@customElement('solid-contacts-pane-new-group-modal')
+@customElement('contacts-pane-new-group-modal')
 export default class NewGroupModal extends DialogComponent<Group> {
   static styles = styles
 
@@ -33,7 +33,7 @@ export default class NewGroupModal extends DialogComponent<Group> {
 
   protected render () {
     if (!this.book) {
-      throw new Error('Book is required for <solid-contacts-pane-new-group-modal>')
+      throw new Error('Book is required for <contacts-pane-new-group-modal>')
     }
 
     return html`

@@ -26,7 +26,7 @@ type ContactType = (typeof CONTACT_TYPES)[number]['value']
 
 type Person = any
 
-@customElement('solid-contacts-pane-add-contact-modal')
+@customElement('contacts-pane-add-contact-modal')
 export default class AddContactModal extends WebComponent {
   static styles = styles
 
@@ -63,7 +63,7 @@ export default class AddContactModal extends WebComponent {
 
   protected render () {
     if (!this.book || !this.selectedGroups) {
-      throw new Error('Book and selectedGroups are required for <solid-contacts-pane-add-contact-modal>')
+      throw new Error('Book and selectedGroups are required for <contacts-pane-add-contact-modal>')
     }
 
     return html`

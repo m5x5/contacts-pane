@@ -36,7 +36,7 @@ const wired = new WeakSet<Element>()
  * out which contacts to show -- so it is mutated in place rather than replaced.
  * `revision` is what turns those in-place mutations back into a render.
  */
-@customElement('solid-contacts-pane-group-bar')
+@customElement('contacts-pane-group-bar')
 export default class GroupBar extends WebComponent {
   static styles = styles
 
@@ -54,6 +54,9 @@ export default class GroupBar extends WebComponent {
 
   @state()
   private accessor busy = false;
+
+  @state()
+  private accessor error: string | null = null;
 
   @state()
   private accessor revision = 0;
@@ -83,9 +86,17 @@ export default class GroupBar extends WebComponent {
     this.refresh()
     if (!this.rows.length) return
 
+    this.error = null
     this.busy = true
-    await Promise.all(this.rows.map(row => this.load(row.group)))
+    const loaded = await Promise.all(this.rows.map(row => this.load(row.group)))
     this.busy = false
+
+    const failed = this.rows.filter((_row, i) => !loaded[i])
+    if (failed.length) {
+      console.error('Failed to load group documents:', failed.map(row => row.uri))
+      this.error = 'Failed to load all groups. If it persists, contact your admin.'
+      return
+    }
 
     for (const row of this.rows) this.selectedGroups[row.uri] = true
 
@@ -139,6 +150,8 @@ export default class GroupBar extends WebComponent {
         ${repeat(this.rows, row => row.uri, row => this.renderGroup(row))}
       </ul>
 
+      ${this.error ? html`<p class="error" role="alert">${this.error}</p>` : nothing}
+
       <solid-ui-button variant="secondary" @click=${this.onNewGroup}>
         <icon-lucide-plus slot="left-icon"></icon-lucide-plus>
         New Group
@@ -187,6 +200,7 @@ export default class GroupBar extends WebComponent {
 
   private async onGroup (event: MouseEvent, row: GroupRow) {
     event.preventDefault()
+    this.error = null
 
     // Command-click accumulates; a plain click replaces the selection.
     if (event.metaKey) {
@@ -198,7 +212,11 @@ export default class GroupBar extends WebComponent {
 
     this.revision++
 
-    await this.load(row.group)
+    const ok = await this.load(row.group)
+    if (!ok) {
+      console.error('Failed to load group document:', row.uri)
+      this.error = `Failed to load "${row.name}". If it persists, contact your admin.`
+    }
 
     this.refresh() // the members, and so the count, are known now
     this.announceSelection()

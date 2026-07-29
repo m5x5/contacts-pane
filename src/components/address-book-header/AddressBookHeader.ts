@@ -24,7 +24,7 @@ type Person = any
  * the result. Deleting a group is not, so it only raises an intent; both the
  * confirmation and the deletion are the pane's business.
  */
-@customElement('solid-contacts-pane-address-book-header')
+@customElement('contacts-pane-address-book-header')
 export default class AddressBookHeader extends WebComponent {
   static styles = styles
 
@@ -68,7 +68,10 @@ export default class AddressBookHeader extends WebComponent {
   protected render () {
     return html`
       <header>
-        <h2 id="addressBook-heading" tabindex="-1">${this.selectedGroupName ?? 'All Contacts'}</h2>
+        <div class="titles">
+          <h2 id="addressBook-heading" tabindex="-1">${this.selectedGroupName ?? 'All Contacts'}</h2>
+          <p>Search contacts by name, email, WebID, or profile URL</p>
+        </div>
         <div class="actions">
           <solid-ui-button
             variant="secondary"
@@ -154,7 +157,7 @@ export default class AddressBookHeader extends WebComponent {
 
   private onAddContact () {
     if (!this.book || !this.selectedGroups) {
-      throw new Error('Book and selectedGroups are required for <solid-contacts-pane-address-book-header>')
+      throw new Error('Book and selectedGroups are required for <contacts-pane-address-book-header>')
     }
 
     showDialog(AddContactModal, {

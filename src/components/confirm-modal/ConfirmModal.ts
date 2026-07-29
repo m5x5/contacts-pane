@@ -9,7 +9,7 @@ import 'solid-ui/components/button'
 
 import styles from './ConfirmModal.styles.css'
 
-@customElement('solid-contacts-pane-confirm-modal')
+@customElement('contacts-pane-confirm-modal')
 export default class ConfirmModal extends DialogComponent<boolean> {
   static styles = styles
 

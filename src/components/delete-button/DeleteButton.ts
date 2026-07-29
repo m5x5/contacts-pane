@@ -17,7 +17,7 @@ import styles from './DeleteButton.styles.css'
  * attribute. It replaces UI.widgets.deleteButtonWithCheck, whose own inline
  * popup would have asked a second time.
  */
-@customElement('solid-contacts-pane-delete-button')
+@customElement('contacts-pane-delete-button')
 export default class DeleteButton extends WebComponent {
   static styles = styles
 
@@ -71,6 +71,8 @@ export default class DeleteButton extends WebComponent {
       await this.deleteAction?.()
     } catch (err) {
       debug.error('Error deleting ' + this.noun + '. Stack: ' + err)
+      // A dialog, not the pane's usual inline error text: this control is a
+      // bare icon with no surface of its own to carry a message.
       alertDialog(`Failed to delete ${this.noun}. If it persists, contact your admin.`)
     }
   }
@@ -90,7 +92,7 @@ export function renderDeleteButton (
   deleteAction: () => unknown,
   options: { confirm?: boolean, message?: string } = {}
 ): DeleteButton {
-  const button = dom.createElement('solid-contacts-pane-delete-button') as DeleteButton
+  const button = dom.createElement('contacts-pane-delete-button') as DeleteButton
 
   button.noun = noun
   button.deleteAction = deleteAction

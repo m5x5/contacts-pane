@@ -9,7 +9,7 @@ import 'solid-ui/components/button'
 
 import styles from './AlertModal.styles.css'
 
-@customElement('solid-contacts-pane-alert-modal')
+@customElement('contacts-pane-alert-modal')
 export default class AlertModal extends DialogComponent<true> {
   static styles = styles
 

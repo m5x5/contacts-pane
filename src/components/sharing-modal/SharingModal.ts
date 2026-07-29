@@ -15,7 +15,7 @@ import styles from './SharingModal.styles.css'
  * rather than rendered into the shadow root, where those rules could not
  * reach them.
  */
-@customElement('solid-contacts-pane-sharing-modal')
+@customElement('contacts-pane-sharing-modal')
 export default class SharingModal extends DialogComponent<void> {
   static styles = styles
 

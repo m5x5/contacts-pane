@@ -64,7 +64,7 @@ describe('modal dialog helpers', () => {
 
     await settle()
 
-    expect(deepQuery(document.body, 'solid-contacts-pane-alert-modal')).not.toBeNull()
+    expect(deepQuery(document.body, 'contacts-pane-alert-modal')).not.toBeNull()
 
     expect(deepQuery(document.body, 'solid-ui-dialog')?.getAttribute('title')).toBe('Information')
     expect(deepQuery(document.body, 'solid-ui-dialog-content')?.textContent).toContain('Hello world')
