@@ -87,3 +87,10 @@ solid-ui-button {
     white-space: nowrap;
     flex-shrink: 0;
 }
+
+.error {
+    margin: 0;
+    padding: 0 var(--spacing-md);
+    color: var(--solid-ui-color-red-500);
+    font-size: var(--solid-ui-font-size-sm);
+}

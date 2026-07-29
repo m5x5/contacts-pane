@@ -119,10 +119,17 @@ export function deleteRecursive (kb, folder) {
 // does that -- so this deletes without asking.
 export async function deleteThingAndDoc (x) {
   debug.log('deleteThingAndDoc - to be deleted ' + x)
-  const ds = kb.statementsMatching(x).concat(kb.statementsMatching(undefined, undefined, x))
+  // Statements in x's own document go down with it; only mentions elsewhere
+  // (the indexes, group membership) need patching out.
+  const ds = kb.statementsMatching(x)
+    .concat(kb.statementsMatching(undefined, undefined, x))
+    .filter(st => !st.why.sameTerm(x.doc()))
   try {
-    await kb.updater.updateMany(ds)
+    // Document first: if this fails, the thing is still intact everywhere.
+    // The reverse order left invisible orphans -- gone from the indexes, but
+    // still occupying storage.
     await kb.fetcher.delete(x.doc())
+    await kb.updater.updateMany(ds)
     debug.log('deleteThingAndDoc - deleted')
   } catch (err) {
     debug.error('Error deleting ' + x + '. Stack: ' + err)

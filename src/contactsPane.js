@@ -384,7 +384,7 @@ function buildMainLayout (ctx) {
 function buildHeaderSection (ctx) {
   const { dom, book, selectedGroups, setMe } = ctx
 
-  const headerSection = dom.createElement('solid-contacts-pane-address-book-header')
+  const headerSection = dom.createElement('contacts-pane-address-book-header')
   headerSection.book = book
   headerSection.selectedGroups = selectedGroups
 
@@ -505,7 +505,7 @@ function buildSearchSection (ctx) {
 function buildGroupBar (ctx) {
   const { dom, kb, book, options, groupIndex, selectedGroups, setActiveActionButton } = ctx
 
-  const buttonSection = dom.createElement('solid-contacts-pane-group-bar')
+  const buttonSection = dom.createElement('contacts-pane-group-bar')
   buttonSection.classList.add('buttonSection')
   buttonSection.book = book
   buttonSection.options = options
@@ -562,9 +562,6 @@ function openDetailsView (ctx, { wide }) {
 function showSharing (ctx) {
   const { dom, kb, book, dataBrowserContext, div, me } = ctx
 
-  // solid-ui builds these controls imperatively, so assemble them into a
-  // container and hand that to the dialog to slot in. It stays in the light
-  // DOM, so contactsPane.css can still reach it.
   const content = dom.createElement('div')
   content.classList.add('sharingControls')
 
@@ -574,7 +571,7 @@ function showSharing (ctx) {
       dataBrowserContext,
       'book',
       kb,
-      function (ok, body) {
+      (ok, body) => {
         if (!ok) {
           debug.error('ACL control box Failed. Stack: ' + body)
           complain(content, dom, 'Problem displaying sharing controls. If persists, contact admin.')
@@ -614,7 +611,7 @@ function showTools (ctx) {
       book,
       dataBrowserContext,
       me,
-      function refreshGroups () {
+      (refreshGroups) => {
         ctx.groupBar.refresh()
       }
     )

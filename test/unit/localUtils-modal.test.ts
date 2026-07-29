@@ -91,7 +91,7 @@ describe('modal dialog helpers', () => {
 
     await settle()
 
-    expect(deepQueryAll(document.body, 'solid-contacts-pane-alert-modal')).toHaveLength(1)
+    expect(deepQueryAll(document.body, 'contacts-pane-alert-modal')).toHaveLength(1)
 
     footerButtons()[0].click()
 
@@ -105,7 +105,7 @@ describe('modal dialog helpers', () => {
 
     await settle()
 
-    expect(deepQueryAll(document.body, 'solid-contacts-pane-alert-modal')).toHaveLength(1)
+    expect(deepQueryAll(document.body, 'contacts-pane-alert-modal')).toHaveLength(1)
   })
 
   test('alertDialog still stacks distinct messages', async () => {
@@ -114,7 +114,7 @@ describe('modal dialog helpers', () => {
 
     await settle()
 
-    expect(deepQueryAll(document.body, 'solid-contacts-pane-alert-modal')).toHaveLength(2)
+    expect(deepQueryAll(document.body, 'contacts-pane-alert-modal')).toHaveLength(2)
   })
 
   test('confirmDialog resolves false on Cancel and true on OK', async () => {
@@ -154,7 +154,7 @@ describe('renderDeleteButton', () => {
     button.click()
     await settle()
 
-    expect(deepQuery(document.body, 'solid-contacts-pane-confirm-modal')).not.toBeNull()
+    expect(deepQuery(document.body, 'contacts-pane-confirm-modal')).not.toBeNull()
     expect(deleted).toBe(false) // nothing happens until the user agrees
 
     footerButtons()[1].click() // OK
@@ -183,7 +183,7 @@ describe('renderDeleteButton', () => {
     button.click()
     await settle()
 
-    expect(deepQuery(document.body, 'solid-contacts-pane-confirm-modal')).toBeNull()
+    expect(deepQuery(document.body, 'contacts-pane-confirm-modal')).toBeNull()
     expect(deleted).toBe(true)
   })
 
@@ -198,7 +198,7 @@ describe('renderDeleteButton', () => {
     footerButtons()[1].click() // OK
     await settle()
 
-    const alert = deepQuery(document.body, 'solid-contacts-pane-alert-modal')
+    const alert = deepQuery(document.body, 'contacts-pane-alert-modal')
     expect(alert).not.toBeNull()
     expect(deepQuery(document.body, 'solid-ui-dialog-content')?.textContent).toContain('Failed to delete contact')
   })

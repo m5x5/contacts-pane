@@ -460,7 +460,7 @@ export async function checkDataModel (book, detailsSectionContent) {
           dom,
           detailsSectionContent, // where it appends it to
           'contact',
-          async function () {
+          async () => {
             await kb.updater.updateMany(del, ins)
             debug.log('Deleted ' + del.length + ' bad statements from groups')
           },

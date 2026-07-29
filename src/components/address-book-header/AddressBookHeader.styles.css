@@ -1,7 +1,7 @@
 :host {
     display: block;
     background: var(--solid-ui-color-white);
-    padding: var(--spacing-sm);
+    padding: var(--spacing-2xs) var(--spacing-sm);
     border-top-left-radius: var(--border-radius-full);
     border-top-right-radius: var(--border-radius-full);
     margin-bottom: 0;
@@ -14,6 +14,21 @@
         justify-content: space-between;
         gap: var(--spacing-sm);
         margin-bottom: 0;
+    }
+
+    /* Heading and its subtitle stack, so the subtitle sits under the title
+       rather than becoming a third item in the header's row. */
+    .titles {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-3xs, 0.125rem);
+        min-width: 0;
+    }
+
+    .titles p {
+        margin: 0;
+        color: var(--solid-ui-color-gray-500);
+        font-size: var(--solid-ui-font-size-sm);
     }
 
     .actions {
@@ -30,6 +45,7 @@
     h2 {
         font-size: 1.5em;
         font-weight: var(--font-weight-bold, 600);
+        color: var(--solid-ui-color-gray-700);
         line-height: var(--line-height-tight);
         margin-top: 0;
         margin-bottom: 0;

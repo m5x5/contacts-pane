@@ -59,15 +59,6 @@
   max-width: 56.25rem; /* 900px */
 }
 
-.contactPane .cardFooter {
-  display: flex;
-  flex-wrap: nowrap; /* keep buttons inline */
-  align-items: center; /* vertical centering if varied heights */
-  gap: var(--spacing-xs);
-  padding-top: var(--spacing-md);
-  margin-top: var(--spacing-md);
-}
-
 .contactPane .detailsSectionContent {
   margin: 0;
 }
@@ -275,9 +266,7 @@
 
   .contactPane .actionButton,
   .contactPane .searchInput,
-  .contactPane .flatButton,
-  .contactPane .buttonSection button,
-  .contactPane .groupButtonsList button {
+  .contactPane .flatButton {
     min-height: calc(var(--min-touch-target) + 0.5em) !important;
     font-size: 1.5rem !important;
     padding: 0.875em 1em !important;
@@ -360,110 +349,6 @@
   background: transparent;
 }
 
-.contactPane .buttonSection .selected {
-  background: none !important;
-}
-
-.contactPane .groupButtonsList {
-  display: flex;
-  flex-direction: column;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  gap: var(--spacing-xs);
-  list-style: none;
-}
-
-.contactPane .buttonSection .groupButtonsList {
-  padding-left: 0;
-}
-
-.contactPane .groupButtonsList li {
-  flex-shrink: 0;
-}
-
-.contactPane .groupButtonsList button {
-  white-space: nowrap;
-  flex-shrink: 0;
-  min-width: max-content;
-  margin-left: 0;
-  display: flex;
-  align-items: center;
-  /* Stacked items are full width, so push the count to the trailing edge. */
-  justify-content: space-between;
-  width: 100%;
-  gap: var(--spacing-xs);
-}
-
-/* Contact count badge on a group button. Stays empty until the group's
-   document has loaded, so it never shows a misleading 0. */
-.contactPane .groupButtonsList .groupCount:not(:empty) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.5em;
-  padding: 0 0.4em;
-  border-radius: var(--border-radius-full);
-  background: var(--solid-ui-color-white);
-  font-size: 0.85em;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.6;
-}
-
-/* Groups list in details section — flexible 2-column grid */
-.contactPane .detailsSectionContent .groupButtonsList {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--spacing-sm);
-  list-style: none;
-  padding: 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.contactPane .detailsSectionContent .groupButtonsList li {
-  width: 100%;
-  aspect-ratio: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--spacing-xs);
-}
-
-.contactPane .detailsSectionContent .groupButtonsList button {
-  width: 100%;
-  height: auto;
-  text-align: center;
-  border-radius: var(--border-radius-base);
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
-
-.contactPane .detailsSectionContent .groupButtonsList li > img.hoverControlHide,
-.contactPane .detailsSectionContent .groupButtonsList li > img[data-testid="deleteButtonWithCheck"] {
-  display: block;
-  align-self: flex-end;
-  float: none !important;
-  margin: 0 !important;
-}
-
-@media (max-width: 599px) {
-  .contactPane .detailsSectionContent .groupButtonsList {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-xs);
-  }
-
-  .contactPane .detailsSectionContent .groupButtonsList button {
-    font-size: var(--font-size-sm);
-    border-radius: var(--border-radius-base);
-  }
-}
-
-@media (min-width: 900px) {
-  .contactPane .detailsSectionContent .groupButtonsList {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
 .contactPane .detailsSectionContent .newGroupBtn {
   width: 100%;
   box-sizing: border-box;
@@ -487,7 +372,6 @@
 
 
 .contactPane .webidControl .personaRow--webid td > div[style*="position: relative"] > div,
-.contactPane .detailsSectionContent .groupButtonsList li > div[style*="position: relative"] > div,
 .contactPane .detailsSectionContent .contact-toolbar  > div[style*="position: relative"] > div {
   position: absolute !important;
   left: auto !important;
@@ -510,12 +394,6 @@
 .contactPane .detailsSectionContent .group-membership-item .group-membership-toolbar > div[style*="position: relative"] > div > button:has(> img[src$=".svg"]),
 .contactPane .webidControl .personaRow--webid td > div[style*="position: relative"] > div > button:has(> img[src$=".svg"]) {
   background-color: transparent !important;
-}
-
-/* Selected state for All contacts button */
-.contactPane .allGroupsButton--selected {
-  background-color: var(--color-primary);
-  color: var(--color-background);
 }
 
 /* The header section lives in components/address-book-header, and is styled
