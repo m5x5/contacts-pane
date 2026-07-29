@@ -1,0 +1,37 @@
+:host {
+    display: block;
+    background: var(--solid-ui-color-white);
+    padding: var(--spacing-sm);
+    border-top-left-radius: var(--border-radius-full);
+    border-top-right-radius: var(--border-radius-full);
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--solid-ui-color-gray-200);
+
+    header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--spacing-sm);
+        margin-bottom: 0;
+    }
+
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--spacing-xs);
+    }
+
+    solid-ui-button {
+        white-space: nowrap;
+    }
+
+    h2 {
+        font-size: 1.5em;
+        font-weight: var(--font-weight-bold, 600);
+        line-height: var(--line-height-tight);
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+}
