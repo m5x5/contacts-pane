@@ -12,8 +12,8 @@ const ns = UI.ns
 // can keep using `await confirmDialog(...)` without knowing about components.
 
 // Alerts that are currently on screen, keyed by title + message. Callers such
-// as selectAllGroups report one failure per group, which would otherwise stack
-// a separate dialog for each. The previous implementation reused a single
+// as handleURIsDroppedOnGroup report one failure per item, which would
+// otherwise stack a separate dialog for each. The previous implementation reused a single
 // overlay and so collapsed them; we keep that behaviour by handing back the
 // promise of the alert that is already showing.
 const openAlerts = new Map()
@@ -83,6 +83,43 @@ export function normalizeGroupUri (uri) {
 
 export function complain (div, d, message) {
   div.appendChild(UI.widgets.errorMessageBlock(d, message, 'pink'))
+}
+
+/**
+ * Whether anyone on the web can read the thing's document.
+ * Reads the ACL when we are allowed to (owners); otherwise falls back to
+ * probing whether the document answers an unauthenticated request, which any
+ * visitor can do. Resolves 'public' | 'private', or null when neither way
+ * gives an answer.
+ * @param {NamedNode} subject
+ * @returns {Promise<'public' | 'private' | null>}
+ */
+export function documentVisibility (subject) {
+  const doc = subject.doc()
+  return new Promise(resolve => {
+    UI.acl.getACLorDefault(doc, (ok, exists, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc) => {
+      // Reading an ACL needs Control access; a visitor without it can still
+      // learn the answer from the outside.
+      if (!ok) return resolve(anonymousVisibility(doc))
+      const ac = exists
+        ? UI.acl.readACL(targetDoc, targetACLDoc, kb)
+        : UI.acl.readACL(defaultHolder, defaultACLDoc, kb, true)
+      const everyone = ac.agentClass[ns.foaf('Agent').uri]
+      resolve(everyone && everyone[ns.acl('Read').uri] ? 'public' : 'private')
+    })
+  })
+}
+
+/** Public iff the document answers a request that carries no credentials. */
+async function anonymousVisibility (doc) {
+  try {
+    const response = await fetch(doc.uri, { method: 'HEAD', credentials: 'omit' })
+    if (response.ok) return 'public'
+    if (response.status === 401 || response.status === 403) return 'private'
+    return null
+  } catch (_e) {
+    return null
+  }
 }
 
 export function getSameAs (kb, item, doc) {
@@ -222,6 +259,28 @@ export function setupResponsiveStacking (paneDiv, breakpoint = 900) {
     paneDiv.classList.toggle('contactPane--narrow', isNarrow)
     paneDiv.dataset.viewportNarrow = viewportNarrow ? 'true' : 'false'
 
+    // On desktop the pane fills the viewport below whatever sits above it
+    // (the data browser's header) and no more; the columns scroll inside.
+    // Narrow layouts stack and let the page scroll instead.
+    if (!isNarrow && typeof window !== 'undefined' && paneDiv.isConnected) {
+      const top = Math.max(0, paneDiv.getBoundingClientRect().top)
+      // Page overflow that remains once the pane is viewport-sized comes
+      // from the chrome around it (the outline table's borders, a footer).
+      // Remember it and leave it room, else the page scrolls by that much.
+      // Capped: unexpectedly tall surroundings must not crush the pane.
+      const docEl = paneDiv.ownerDocument.documentElement
+      if (paneDiv.style.getPropertyValue('--pane-max-height') !== '') {
+        const overflow = docEl.scrollHeight - window.innerHeight
+        if (overflow > 0) {
+          paneDiv.__paneHeightTrim = Math.min(200, (paneDiv.__paneHeightTrim || 0) + overflow)
+        }
+      }
+      const available = Math.max(320, window.innerHeight - top - (paneDiv.__paneHeightTrim || 0))
+      paneDiv.style.setProperty('--pane-max-height', available + 'px')
+    } else {
+      paneDiv.style.removeProperty('--pane-max-height')
+    }
+
     return isNarrow
   }
 
@@ -244,6 +303,9 @@ export function setupResponsiveStacking (paneDiv, breakpoint = 900) {
       debouncedUpdate()
     })
     ro.observe(paneDiv)
+    // Referenced from the element so the observer cannot be collected while
+    // the pane lives.
+    paneDiv.__responsiveObserver = ro
   }
 
   if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
@@ -258,6 +320,13 @@ export function setupResponsiveStacking (paneDiv, breakpoint = 900) {
     // If we are not in the document yet, re-run until connected
     if (!paneDiv.isConnected) {
       requestAnimationFrame(ensureInitialUpdate)
+    } else {
+      // Connected, but typically not laid out yet: the first run sees width
+      // 0 and guesses from the viewport. Settle on real measurements once
+      // layout and the async render have had a chance to happen.
+      for (const delay of [0, 250, 1000]) {
+        setTimeout(updateResponsiveState, delay)
+      }
     }
   }
 

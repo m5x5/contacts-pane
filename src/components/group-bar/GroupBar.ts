@@ -6,9 +6,11 @@ import { customElement, WebComponent, ns, widgets } from 'solid-ui'
 import { store } from 'solid-logic'
 
 import { groupsInOrder, groupMemberCount, handleURIsDroppedOnGroup, refreshNames } from '../../addressBookPresenter'
+import { groupMembers } from '../../contactLogic'
 
 import 'solid-ui/components/button'
 import 'solid-ui/components/icons'
+import 'solid-ui/components/input'
 
 import styles from './GroupBar.styles.css'
 
@@ -65,6 +67,10 @@ export default class GroupBar extends WebComponent {
   @state()
   private accessor revision = 0;
 
+  /** Narrows the list of group buttons; selections elsewhere are unaffected. */
+  @state()
+  private accessor filter = '';
+
   connectedCallback () {
     super.connectedCallback()
     this.refresh()
@@ -118,6 +124,20 @@ export default class GroupBar extends WebComponent {
     return this.rows.length > 0 && this.rows.every(row => this.selectedGroups[row.uri])
   }
 
+  /** How many distinct contacts the loaded groups hold between them, or null
+   * before any group document is in -- the same "show nothing rather than a
+   * misleading 0" rule the per-group counts follow. */
+  private get allCount (): number | null {
+    const seen = new Set<string>()
+    let anyLoaded = false
+    for (const row of this.rows) {
+      if (row.count === null) continue
+      anyLoaded = true
+      for (const member of groupMembers(kb, row.group)) seen.add(member.uri)
+    }
+    return anyLoaded ? seen.size : null
+  }
+
   private load (group: Group): Promise<boolean> {
     return new Promise(resolve => {
       kb.fetcher.nowOrWhenFetched(group.doc(), undefined, (ok: boolean) => resolve(ok))
@@ -140,28 +160,59 @@ export default class GroupBar extends WebComponent {
     })
   }
 
+  private get visibleRows () {
+    const filter = this.filter.trim().toLowerCase()
+    if (filter.length === 0) return this.rows
+
+    return this.rows.filter(row => row.name.toLowerCase().includes(filter))
+  }
+
+  private onFilterInput (event: Event) {
+    this.filter = (event.target as HTMLInputElement).value?.toString() ?? ''
+  }
+
   protected render () {
     return html`
-      ${this.heading ? html`<h2 class="heading">${this.heading}</h2>` : nothing}
+      <header class="header">
+        ${this.heading ? html`<h2 class="heading">${this.heading}</h2>` : nothing}
+        <solid-ui-input
+          class="groupFilter"
+          type="search"
+          aria-label="Filter groups"
+          placeholder="Filter groups"
+          .value=${this.filter}
+          @input=${this.onFilterInput}
+        ></solid-ui-input>
+      </header>
 
       <button
         type="button"
         class="allGroupsButton ${this.allSelected ? 'allGroupsButton--active' : ''}"
+        aria-label=${this.allCount === null
+          ? 'All Contacts'
+          : `All Contacts, ${this.allCount} ${this.allCount === 1 ? 'contact' : 'contacts'}`}
         aria-pressed=${this.allSelected ? 'true' : 'false'}
         aria-busy=${this.busy ? 'true' : 'false'}
         @click=${this.onAllGroups}
-      >All Contacts</button>
+      >
+        <span class="groupName">All Contacts</span>
+        ${this.allCount === null
+          ? nothing
+          : html`<span class="groupCount" aria-hidden="true">${this.allCount}</span>`}
+      </button>
 
       <ul class="groupButtonsList" role="list" aria-label="Groups list">
-        ${repeat(this.rows, row => row.uri, row => this.renderGroup(row))}
+        ${repeat(this.visibleRows, row => row.uri, row => this.renderGroup(row))}
       </ul>
 
       ${this.error ? html`<p class="error" role="alert">${this.error}</p>` : nothing}
 
-      <solid-ui-button variant="secondary" @click=${this.onNewGroup}>
-        <icon-lucide-plus slot="left-icon"></icon-lucide-plus>
-        New Group
-      </solid-ui-button>
+      <div class="newGroup">
+        <solid-ui-button variant="secondary" @click=${this.onNewGroup}>
+          <icon-lucide-plus slot="left-icon"></icon-lucide-plus>
+          New Group
+        </solid-ui-button>
+      </div>
     `
   }
 

@@ -31,6 +31,37 @@
         font-size: var(--solid-ui-font-size-sm);
     }
 
+    /* Title and its visibility badge share a line. */
+    .titleRow {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        min-width: 0;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        height: 1.25rem; /* 20px */
+        padding: 0 0.5rem;
+        border-radius: 5px;
+        font-size: var(--solid-ui-font-size-sm, 0.75rem);
+        font-weight: var(--font-weight-medium, 500);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .badge--public {
+        background: #eff6ff;
+        color: #51a2ff;
+    }
+
+    .badge--private {
+        background: var(--solid-ui-color-gray-100, #f1f5f9);
+        color: var(--solid-ui-color-gray-500, #62748e);
+    }
+
     .actions {
         display: flex;
         flex-wrap: wrap;

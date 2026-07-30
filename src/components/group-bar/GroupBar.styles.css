@@ -4,10 +4,16 @@
    come along with it. */
 /* The host (.buttonSection) is padded by contactsPane.css; the negative
    margins pull the border out to the component's real edges, and the extra
-   padding puts the text back where it was. */
-.heading {
+   padding puts the content back where it was. The title and the group filter
+   share the header, so its border underlines both. */
+.header {
     margin: 0 calc(-1 * var(--spacing-sm));
     padding: 9px calc(var(--spacing-sm));
+    border-bottom: 1px solid var(--solid-ui-color-gray-200);
+}
+
+.heading {
+    margin: 0;
     color: var(--solid-ui-color-gray-700);
     /* Mirrors the h2 in the address book header, so the two column titles read
        as one row. */
@@ -17,7 +23,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    border-bottom: 1px solid var(--solid-ui-color-gray-200);
+}
+
+.groupFilter {
+    display: block;
+    margin-top: var(--spacing-xs);
 }
 
 .groupButtonsList {
@@ -29,6 +39,10 @@
     list-style: none;
     margin: 0;
     padding: 0;
+    /* Take whatever height the column has spare, so New Group and its
+       separator sit at the bottom -- but never shrink below the groups,
+       which would paint them over that footer; the column scrolls instead. */
+    flex: 1 0 auto;
 }
 
 .groupButtonsList li {
@@ -100,6 +114,14 @@
 solid-ui-button {
     white-space: nowrap;
     flex-shrink: 0;
+}
+
+/* Separates New Group from the group list above it. Negative margins take the
+   border to the component's real edges, mirroring the header's. */
+.newGroup {
+    margin: var(--spacing-xs) calc(-1 * var(--spacing-sm)) 0;
+    padding: var(--spacing-xs) var(--spacing-sm) 0;
+    border-top: 1px solid var(--solid-ui-color-gray-200);
 }
 
 .error {

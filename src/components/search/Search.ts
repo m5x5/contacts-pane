@@ -37,6 +37,22 @@ export default class Search extends WebComponent {
     this.text = v ?? ''
   }
 
+  /** Empty the filter and tell listeners -- for the pane, when it hides the
+   * box and the list must stop being invisibly filtered. */
+  clear () {
+    if (this.text === '') return
+
+    this.text = ''
+    this.announce()
+  }
+
+  /** Put the caret in the box -- for the pane, when it reveals it. */
+  focusInput () {
+    // solid-ui-input does not delegate focus yet, so focusing the host does
+    // nothing; reach for its inner control until it learns to.
+    this.input?.shadowRoot?.querySelector('input')?.focus()
+  }
+
   protected render () {
     return html`
       <div class="searchDiv">
@@ -62,11 +78,8 @@ export default class Search extends WebComponent {
   }
 
   private onClear () {
-    this.text = ''
-    // solid-ui-input does not delegate focus yet, so focusing the host does
-    // nothing; reach for its inner control until it learns to.
-    this.input?.shadowRoot?.querySelector('input')?.focus()
-    this.announce()
+    this.clear()
+    this.focusInput()
   }
 
   private announce () {

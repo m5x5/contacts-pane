@@ -175,14 +175,30 @@ export default class PeopleList extends WebComponent {
     `
   }
 
+  /** The person's first email address, once their card has loaded. Read at
+   * render time like the avatar, so it appears when the background load
+   * finishes. */
+  private emailFor (person: Person): string | null {
+    for (const emailNode of kb.each(person, ns.vcard('hasEmail'))) {
+      // vcard nests the address under vcard:value; older data may put the
+      // mailto: on hasEmail directly.
+      const value = kb.any(emailNode as any, ns.vcard('value')) ?? emailNode
+      const address = String(value.value ?? '').replace(/^mailto:/, '')
+      if (address.includes('@')) return address
+    }
+    return null
+  }
+
   private renderRow (row: PersonRow) {
     const avatarUrl = kb.any(row.person, ns.vcard('hasPhoto'))
+    const email = this.emailFor(row.person)
+    const role = kb.anyValue(row.person, ns.vcard('role'))
 
     return html`
       <li
         role="listitem"
         tabindex="0"
-        aria-label=${row.name}
+        aria-label=${[row.name, role, email].filter(Boolean).join(', ')}
         class="personLi ${this.selectedUri === row.uri ? 'selected' : ''} ${row.error ? 'personLi--error' : ''}"
         @click=${() => this.select(row.person)}
         @keydown=${(event: KeyboardEvent) => this.onRowKeydown(event, row)}
@@ -193,12 +209,18 @@ export default class PeopleList extends WebComponent {
             ? html`<img src=${avatarUrl.value} alt="" />`
             : html`
               <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="18" cy="18" r="18" fill="#e0e0e0"/>
+                <rect width="36" height="36" fill="#e0e0e0"/>
                 <text x="50%" y="58%" text-anchor="middle" fill="#595959" font-size="16" dy=".3em">?</text>
               </svg>
             `}
         </div>
-        <div class="name">${row.name}</div>
+        <div class="identity">
+          <div class="nameRow">
+            <div class="name">${row.name}</div>
+            ${role ? html`<div class="role">${role}</div>` : nothing}
+          </div>
+          ${email ? html`<div class="email">${email}</div>` : nothing}
+        </div>
         ${this.renderRowMenu(row)}
       </li>
     `

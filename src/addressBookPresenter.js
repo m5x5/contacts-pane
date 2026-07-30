@@ -2,7 +2,7 @@ import { addPersonToGroup, groupMembers, getDataModelIssues } from './contactLog
 import * as UI from 'solid-ui'
 import { authn, store } from 'solid-logic'
 import * as debug from './debug'
-import { complain, alertDialog, confirmDialog, getSameAs, deleteRecursive, deleteThingAndDoc } from './localUtils'
+import { alertDialog, confirmDialog, getSameAs, deleteRecursive, deleteThingAndDoc } from './localUtils'
 import { renderDeleteButton } from './components/delete-button'
 import { groupMembership } from './groupMembershipControl'
 
@@ -52,52 +52,6 @@ export async function handleURIsDroppedOnGroup (uris, group) {
     }
     if (thing) refreshNames(ulPeople)
   }
-}
-
-/** Load and select every group listed in a container whose rows carry `.subject`.
- * The group bar renders itself and selects groups directly; this remains for
- * toolsPane, which drives a table of its own.
- */
-export function selectAllGroups (
-  selectedGroups,
-  ulGroups,
-  callbackFunction
-) {
-  function fetchGroupAndSelect (group, groupLi) {
-    return new Promise((resolve, reject) => {
-      groupLi.classList.add('group-loading')
-      groupLi.setAttribute('aria-busy', 'true')
-      kb.fetcher.nowOrWhenFetched(group.doc(), undefined, function (
-        ok,
-        message
-      ) {
-        if (!ok) {
-          const msg = 'Cannot load group ' + group + '. Stack: ' + message
-          debug.error(msg)
-          if (callbackFunction) callbackFunction(false, msg)
-          reject(msg)
-          return
-        }
-        groupLi.classList.remove('group-loading')
-        groupLi.setAttribute('aria-busy', 'false')
-        groupLi.classList.add('selected')
-        selectedGroups[group.uri] = true
-        refreshNames(ulPeople, null) // @@ every time??
-        if (callbackFunction) callbackFunction(true)
-        resolve(true)
-      })
-    })
-  }
-
-  for (let k = 0; k < ulGroups.children.length; k++) {
-    const groupLi = ulGroups.children[k]
-    const group = groupLi.subject
-    if (!group) continue // Skip non-group items (e.g. All contacts, New group)
-    fetchGroupAndSelect(group, groupLi)
-      .catch(err => {
-        if (callbackFunction) callbackFunction(false, err)
-      })
-  } // for each row
 }
 
 export function groupsInOrder (book, options) {
@@ -169,39 +123,31 @@ export function refreshNames (ulPeopleArg, detailsView, autoSelect = true) {
   list.refresh(autoSelect)
 } // refreshNames
 
-export function selectPerson (ulPeopleArg, person, detailsView) {
-  if (!detailsView) return
+export function selectPerson (ulPeopleArg, person, details) {
+  if (!details) return
   const list = ulPeopleArg || ulPeople
   if (list && typeof list.markSelected === 'function') {
     list.markSelected(person) // Color to remember which one you picked
   }
-  if (detailsView.parentNode) detailsView.parentNode.classList.remove('hidden')
-  detailsView.innerHTML = 'Loading...'
-  detailsView.setAttribute('aria-busy', 'true')
-  detailsView.classList.add('detailsSectionContent--wide')
+  details.showLoading({ wide: true })
   let local
   try {
     local = book ? localNode(person) : person
   } catch (err) {
-    detailsView.innerHTML = ''
-    detailsView.setAttribute('aria-busy', 'false')
-    complain(detailsView, dom, 'Cannot load contact: ' + err.message)
+    details.showError('Cannot load contact: ' + err.message)
     return
   }
   kb.fetcher.nowOrWhenFetched(local.doc(), undefined, function (
     ok,
     message
   ) {
-    detailsView.innerHTML = ''
-    detailsView.setAttribute('aria-busy', 'false')
     if (!ok) {
       debug.error('Failed to load contact card: ' + local + '. Stack: ' + message)
-      complain(detailsView, dom, 'Failed to load contact. If it persists, contact your admin.')
+      details.showError('Failed to load contact. If it persists, contact your admin.')
       return
     }
 
-    detailsView.classList.add('detailsSectionContent--wide')
-    detailsView.appendChild(renderPane(local, 'contact'))
+    details.showContent(renderPane(local, 'contact'), { wide: true, kind: 'contact' })
   })
 }
 
@@ -222,7 +168,7 @@ export function openContactInNewWindow (person) {
  * group memberships, and finally its card and folder. Raised by the people
  * list's per-row menu. */
 export async function deleteContact (person) {
-  const detailsView = cardMain
+  const details = cardMain
 
   if (!(await confirmDialog('Really delete this contact?'))) return
 
@@ -260,26 +206,25 @@ export async function deleteContact (person) {
   } catch (err) {
     // Without this the handler rejected silently and nothing at all happened
     debug.error('Error removing contact from its groups. Stack: ' + err)
-    complain(detailsView, dom, 'Failed to remove the contact from its groups. If it persists, contact your admin.')
+    details?.showError('Failed to remove the contact from its groups. If it persists, contact your admin.')
     return
   }
 
   try {
     await deleteThingAndDoc(person)
   } catch (err) {
-    complain(detailsView, dom, 'Failed to delete contact. If it persists, contact your admin.')
+    details?.showError('Failed to delete contact. If it persists, contact your admin.')
     return
   }
 
   try {
     await deleteRecursive(kb, container)
   } catch (err) {
-    const msg = 'Failed to delete contact. If it persists, contact your admin.'
-    complain(detailsView, dom, msg)
+    details?.showError('Failed to delete contact. If it persists, contact your admin.')
     return
   }
-  refreshNames(ulPeople, detailsView)
-  if (detailsView) detailsView.innerHTML = 'Contact data deleted.'
+  refreshNames(ulPeople, details)
+  details?.showMessage('Contact data deleted.')
 }
 
 export function deselectAllPeople (ulPeopleArg) {
@@ -308,7 +253,7 @@ function localNode (person) {
 }
 
 // Check every group is in the list and add it if not.
-export async function checkDataModel (book, detailsSectionContent) {
+export async function checkDataModel (book, details) {
   // await kb.fetcher.load(groups) // asssume loaded already
   const groups = await loadAllGroups(book)
 
@@ -317,15 +262,17 @@ export async function checkDataModel (book, detailsSectionContent) {
 
     if (authn.currentUser()) {
       if (del.length) {
+        const notice = dom.createElement('div')
         renderDeleteButton(
           dom,
-          detailsSectionContent, // where it appends it to
+          notice, // where it appends it to
           'contact',
           async () => {
             await kb.updater.updateMany(del, ins)
             debug.log('Deleted ' + del.length + ' bad statements from groups')
           },
           { message: 'Clean up ' + del.length + ' bad statement(s) in the group files?' })
+        details.addNotice(notice)
       }
     }
   }
