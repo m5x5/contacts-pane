@@ -6,6 +6,24 @@
     font-family: 'Atkinson Hyperlegible Next';
 }
 
+/* The host (.buttonSection) is padded by contactsPane.css; the negative
+   margins pull the border out to the component's real edges, and the extra
+   padding puts the text back where it was. */
+.heading {
+    margin: 0 calc(-1 * var(--spacing-sm));
+    padding: 9px calc(var(--spacing-sm));
+    color: var(--solid-ui-color-gray-700);
+    /* Mirrors the h2 in the address book header, so the two column titles read
+       as one row. */
+    font-size: 1.5em;
+    font-weight: var(--font-weight-bold, 600);
+    line-height: var(--line-height-tight);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--solid-ui-color-gray-200);
+}
+
 .groupButtonsList {
     display: flex;
     flex-direction: column;

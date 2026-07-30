@@ -63,54 +63,13 @@
   margin: 0;
 }
 
-/* ── Search ──────────────────────────────────────────────────── */
-
 .contactPane .allGroupsButton {
   border-radius: var(--border-radius-full) !important;
   /* existing styles */
 }
-/* wrapper to position clear icon/button */
-.contactPane .searchDiv {
-  position: relative;
-}
 
-.contactPane .searchInput {
-  height: var(--min-touch-target);
-  border: var(--border-width-sm, 1px) solid var(--color-border-pale);
-  background-color: var(--color-section-bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23999' viewBox='0 0 24 24' width='20' height='20'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99c.41.41 1.09.41 1.5 0s.41-1.09 0-1.5l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: 0.5rem center; /* 8px */
-  background-size: 1.25rem 1.25rem; /* 20px 20px */
-  border-radius: var(--border-radius-base);
-  padding: 0 var(--spacing-sm) 0 2.125rem; /* 34px */
-  font-size: var(--font-size-base);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* clear button inside search input */
-.contactPane .searchClearButton {
-  position: absolute;
-  right: var(--spacing-sm);
-  top: 50%;
-  transform: translateY(-50%);
-  border: none;
-  background: transparent;
-  font-size: var(--font-size-base);
-  line-height: 1;
-  padding: 0;
-  cursor: pointer;
-  color: var(--color-text-muted);
-  /* visibility is controlled via the generic `.hidden` utility class */
-  display: block;
-}
-.contactPane .searchClearButton.hidden {
-  display: none;
-}
-.contactPane .searchClearButton:hover {
-  color: var(--color-text);
-}
+/* The search box lives in components/search, and is styled there --
+   shadow DOM keeps these rules from reaching it. */
 
 /* ── Contact toolbar (top-right link + delete) ──────────────── */
 
@@ -265,7 +224,6 @@
   } */
 
   .contactPane .actionButton,
-  .contactPane .searchInput,
   .contactPane .flatButton {
     min-height: calc(var(--min-touch-target) + 0.5em) !important;
     font-size: 1.5rem !important;
@@ -317,8 +275,7 @@
   display: flex;
   flex-wrap: nowrap;
   flex-direction: column;
-  padding: var(--spacing-sm);
-  padding-bottom: 0;
+  padding: 0 var(--spacing-sm) 0 var(--spacing-sm);
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -399,13 +356,6 @@
 /* The header section lives in components/address-book-header, and is styled
    there -- shadow DOM keeps these rules from reaching it. */
 
-/* ── Search section ─────────────────────────────────────────── */
-
-.contactPane .searchSection {
-  padding: var(--spacing-sm);
-  padding-bottom: 0;
-  margin-bottom: 0;
-}
 
 /* ── People list section ────────────────────────────────────── */
 

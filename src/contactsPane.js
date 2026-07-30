@@ -29,6 +29,7 @@ import NewGroupModal from './components/new-group-modal'
 import SharingModal from './components/sharing-modal'
 import './components/address-book-header'
 import './components/group-bar'
+import './components/search'
 
 const ns = UI.ns
 const utils = UI.utils
@@ -164,18 +165,16 @@ export default {
       function renderAddressBookDetails (books, options) {
         const classLabel = utils.label(ns.vcard('AddressBook'))
 
-        let book = options.foreignGroup // in case we have only a Grouo
-        let title = ''
+        let book = options.foreignGroup // in case we have only a Group
         if (books && books.length > 0) {
           book = books[0] // if we have an Address Book, we prefer this
-          title = utils.label(book.dir())
-        } else {
-          kb.any(book, ns.dc('title')) || kb.any(book, ns.vcard('fn'))
-          if (paneOptions.solo && title && typeof document !== 'undefined') {
-            document.title = title.value // @@ only when the outermmost pane
-          }
-          title = title ? title.value : classLabel
         }
+
+        let title = kb.any(book, ns.dc('title')) || kb.any(book, ns.vcard('fn'))
+        if (paneOptions.solo && title && typeof document !== 'undefined') {
+          document.title = title.value // @@ only when the outermmost pane
+        }
+        title = title ? title.value : classLabel
 
         const groupIndex = kb.any(book, ns.vcard('groupIndex'))
         const selectedGroups = {}
@@ -462,51 +461,24 @@ function showNewContact (ctx, person) {
 // ── Builder: search input section ────────────────────────────────────
 function buildSearchSection (ctx) {
   const { dom } = ctx
-  const searchSection = dom.createElement('section')
-  searchSection.classList.add('searchSection')
-  const searchDiv = dom.createElement('div')
-  searchDiv.classList.add('searchDiv')
-  // container for input + clear button
-  searchSection.appendChild(searchDiv)
-  const searchInput = dom.createElement('input')
-  searchInput.setAttribute('type', 'text')
-  searchInput.setAttribute('aria-label', 'Search contacts')
-  searchInput.classList.add('searchInput')
-  searchInput.setAttribute('placeholder', 'Search by name in selected group')
-  searchDiv.appendChild(searchInput)
+  const searchSection = dom.createElement('contacts-pane-search')
 
-  // clear button that appears when there is text
-  const clearBtn = dom.createElement('button')
-  clearBtn.setAttribute('type', 'button')
-  clearBtn.setAttribute('aria-label', 'Clear search')
-  clearBtn.classList.add('searchClearButton', 'hidden')
-  clearBtn.textContent = '\u2715' // multiplication sign ×
-  searchDiv.appendChild(clearBtn)
-
-  searchInput.addEventListener('input', function (_event) {
-    const hasText = searchInput.value.length > 0
-    // show/hide using the shared "hidden" utility class instead of direct
-    // style manipulation
-    clearBtn.classList.toggle('hidden', !hasText)
+  searchSection.addEventListener('filter-changed', () => {
     refreshFilteredPeople(ctx.ulPeople, true, ctx.detailsSectionContent)
   })
 
-  clearBtn.addEventListener('click', function () {
-    searchInput.value = ''
-    clearBtn.classList.add('hidden')
-    searchInput.focus()
-    refreshFilteredPeople(ctx.ulPeople, true, ctx.detailsSectionContent)
-  })
-
-  return { searchSection, searchInput }
+  // The component stands in for the old bare input: the presenter only ever
+  // reads `.value` off whatever it is handed as searchInput.
+  return { searchSection, searchInput: searchSection }
 }
 
 // ── Builder: group buttons bar ───────────────────────────────────────
 function buildGroupBar (ctx) {
-  const { dom, kb, book, options, groupIndex, selectedGroups, setActiveActionButton } = ctx
+  const { dom, kb, book, options, title, groupIndex, selectedGroups, setActiveActionButton } = ctx
 
   const buttonSection = dom.createElement('contacts-pane-group-bar')
   buttonSection.classList.add('buttonSection')
+  buttonSection.heading = title
   buttonSection.book = book
   buttonSection.options = options
   buttonSection.selectedGroups = selectedGroups

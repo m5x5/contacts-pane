@@ -40,6 +40,10 @@ const wired = new WeakSet<Element>()
 export default class GroupBar extends WebComponent {
   static styles = styles
 
+  /** The address book's title, shown as the column's heading. */
+  @property({ attribute: false })
+  accessor heading: string | null = null;
+
   @property({ attribute: false })
   accessor book: Group | null = null;
 
@@ -138,6 +142,8 @@ export default class GroupBar extends WebComponent {
 
   protected render () {
     return html`
+      ${this.heading ? html`<h2 class="heading">${this.heading}</h2>` : nothing}
+
       <button
         type="button"
         class="allGroupsButton ${this.allSelected ? 'allGroupsButton--active' : ''}"
