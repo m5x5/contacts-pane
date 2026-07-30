@@ -2,10 +2,6 @@
    the column. The group list now renders in here too, so the rules that used
    to live in contactsPane.css for .groupButtonsList and the group buttons have
    come along with it. */
-:host {
-    font-family: 'Atkinson Hyperlegible Next';
-}
-
 /* The host (.buttonSection) is padded by contactsPane.css; the negative
    margins pull the border out to the component's real edges, and the extra
    padding puts the text back where it was. */
@@ -15,7 +11,7 @@
     color: var(--solid-ui-color-gray-700);
     /* Mirrors the h2 in the address book header, so the two column titles read
        as one row. */
-    font-size: 1.5em;
+    font-size: 1.25em;
     font-weight: var(--font-weight-bold, 600);
     line-height: var(--line-height-tight);
     overflow: hidden;

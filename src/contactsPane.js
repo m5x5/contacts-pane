@@ -19,7 +19,7 @@ import './styles/utilities.css'
 import './styles/contactsPane.css'
 import {
   checkDataModel, configureAddressBook, refreshNames, selectAllGroups,
-  refreshFilteredPeople, deselectAllPeople
+  deselectAllPeople, selectPerson, deleteContact, openContactInNewWindow
 } from './addressBookPresenter'
 import { alertDialog, complain, confirmDialog, deleteThingAndDoc, setupResponsiveStacking } from './localUtils'
 import * as debug from './debug'
@@ -29,6 +29,7 @@ import NewGroupModal from './components/new-group-modal'
 import SharingModal from './components/sharing-modal'
 import './components/address-book-header'
 import './components/group-bar'
+import './components/people-list'
 import './components/search'
 
 const ns = UI.ns
@@ -178,7 +179,6 @@ export default {
 
         const groupIndex = kb.any(book, ns.vcard('groupIndex'))
         const selectedGroups = {}
-        let selectedPeople = {} // Actually prob max 1
 
         // The Sharing / Tools buttons live in the header and track their own
         // highlight; this just tells them to drop it.
@@ -196,8 +196,6 @@ export default {
           title,
           groupIndex,
           selectedGroups,
-          get selectedPeople () { return selectedPeople },
-          set selectedPeople (v) { selectedPeople = v },
           setActiveActionButton,
           dataBrowserContext,
           div,
@@ -217,9 +215,14 @@ export default {
         ctx.detailsSection = detailsSection
 
         // Create shared DOM elements needed by multiple builders
-        const ulPeople = dom.createElement('ul')
-        ulPeople.setAttribute('role', 'list')
-        ulPeople.setAttribute('aria-label', 'People list')
+        const ulPeople = dom.createElement('contacts-pane-people-list')
+        ulPeople.selectedGroups = selectedGroups
+        ulPeople.addEventListener('person-selected', event =>
+          selectPerson(ulPeople, event.detail.person, ctx.detailsSectionContent))
+        ulPeople.addEventListener('open-contact-requested', event =>
+          openContactInNewWindow(event.detail.person))
+        ulPeople.addEventListener('delete-contact-requested', event =>
+          deleteContact(event.detail.person))
         ctx.ulPeople = ulPeople
         // make the element available on the dataBrowserContext too; other
         // modules (individual/group membership) look for this property when
@@ -252,7 +255,6 @@ export default {
           dom,
           selectedGroups,
           ulPeople,
-          searchInput,
           cardMain: detailsSectionContent,
           dataBrowserContext
         })
@@ -447,9 +449,8 @@ async function deleteSelectedGroup (ctx) {
 function showNewContact (ctx, person) {
   const { dataBrowserContext } = ctx
 
-  ctx.selectedPeople = {}
-  ctx.selectedPeople[person.uri] = true
-  refreshNames(ctx.ulPeople, null) // Add name to list of group
+  refreshNames(ctx.ulPeople, null, false) // Add name to list of group
+  ctx.ulPeople.markSelected(person)
   ctx.detailsSectionContent.innerHTML = '' // Clear 'indexing'
   ctx.detailsSectionContent.classList.add('detailsSectionContent--wide')
   const contactPane = dataBrowserContext.session.paneRegistry.byName('contact')
@@ -463,12 +464,10 @@ function buildSearchSection (ctx) {
   const { dom } = ctx
   const searchSection = dom.createElement('contacts-pane-search')
 
-  searchSection.addEventListener('filter-changed', () => {
-    refreshFilteredPeople(ctx.ulPeople, true, ctx.detailsSectionContent)
+  searchSection.addEventListener('filter-changed', event => {
+    ctx.ulPeople.applyFilter(event.detail.value)
   })
 
-  // The component stands in for the old bare input: the presenter only ever
-  // reads `.value` off whatever it is handed as searchInput.
   return { searchSection, searchInput: searchSection }
 }
 

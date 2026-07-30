@@ -9,10 +9,6 @@
 
 /* ── Layout: Three-column browser ────────────────────────────── */
 
-.contactPane .peopleSection .selected {
-  background-color: var(--color-info-bg) !important;
-}
-
 .contactPane {
   background-color: var(--solid-ui-color-white);
 }
@@ -71,32 +67,6 @@
 /* The search box lives in components/search, and is styled there --
    shadow DOM keeps these rules from reaching it. */
 
-/* ── Contact toolbar (top-right link + delete) ──────────────── */
-
-.contactPane .contact-toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs) 0;
-}
-
-.contactPane .contact-toolbar a {
-  margin: 0.3rem;
-}
-
-.contactPane .contact-toolbar a img {
-  width: 1.3rem;
-  height: 1rem;
-  margin: 0;
-}
-
-.contact-toolbar .deleteButton {
-  margin-left: auto; /* keeps delete icon on the right */
-  margin-right: var(--spacing-xxxs, 0.2rem);
-  width: var(--icon-xxs, 1rem);
-  height: var(--icon-xxs, 1rem);
-  float: none; /* important: prevents overlap behavior */
-}
 
 .contactPane .claimSuccess {
   font-size: var(--font-size-xl);
@@ -190,9 +160,8 @@
     height: auto !important;
   }
 
-  .contactPane .peopleSection ul {
+  .contactPane .peopleSection contacts-pane-people-list {
     max-height: 50vh;
-    overflow-y: auto;
   }
 
   .contactPane .detailSection {
@@ -328,8 +297,7 @@
 }
 
 
-.contactPane .webidControl .personaRow--webid td > div[style*="position: relative"] > div,
-.contactPane .detailsSectionContent .contact-toolbar  > div[style*="position: relative"] > div {
+.contactPane .webidControl .personaRow--webid td > div[style*="position: relative"] > div {
   position: absolute !important;
   left: auto !important;
   z-index: 9999 !important;
@@ -347,7 +315,6 @@
   gap: var(--spacing-xxs) !important;
 }
 
-.contactPane .detailsSectionContent .contact-toolbar > div[style*="position: relative"] > div > button:has(> img[src$=".svg"]),
 .contactPane .detailsSectionContent .group-membership-item .group-membership-toolbar > div[style*="position: relative"] > div > button:has(> img[src$=".svg"]),
 .contactPane .webidControl .personaRow--webid td > div[style*="position: relative"] > div > button:has(> img[src$=".svg"]) {
   background-color: transparent !important;
@@ -365,78 +332,5 @@
   margin-bottom: 0;
 }
 
-/* Only the list scrolls; the header and search stay put. */
-.contactPane .peopleSection > ul {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.contactPane .peopleSection ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-.contactPane .peopleSection li {
-  padding: var(--spacing-xs);
-}
-
-/* ── Person list item (addressBookPresenter) ─────────────────── */
-
-.contactPane .personLi-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.contactPane .personLi-avatar {
-  width: 2.813rem /* 45px */;
-  height: 2.813rem /* 45px */;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.contactPane .personLi-avatar .avatar-placeholder {
-  width: 2.25rem /* 36px */;
-  height: 2.25rem /* 36px */;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.contactPane .personLi-avatar img {
-  width: 2.5rem /* 40px */;
-  height: 2.5rem /* 40px */;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.contactPane .personLi-info {
-  flex: 1;
-  margin-left: var(--spacing-sm);
-  overflow: hidden;
-}
-
-.contactPane .personLi-name {
-  font-weight: bold;
-  font-size: var(--font-size-base);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.contactPane .personLi-arrow {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-}
-
-.contactPane .personLi--error {
-  opacity: 0.5;
-}
+/* The list and its rows live in components/people-list, and are styled
+   there -- shadow DOM keeps these rules from reaching them. */
