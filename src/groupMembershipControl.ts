@@ -9,11 +9,11 @@ import { refreshNames } from './addressBookPresenter'
 import { vcardWebIDs } from './webidControl'
 
 const ns = UI.ns
-const kb = store
+const kb = store as any
 
 // Groups the person is a member of
-export function groupMembership (person, store = kb) {
-  let groups = store.statementsMatching(null, ns.owl('sameAs'), person).map(st => st.why)
+export function groupMembership (person: any, store: any = kb) {
+  let groups = store.statementsMatching(null, ns.owl('sameAs'), person).map((st: any) => st.why)
     .concat(store.each(null, ns.vcard('hasMember'), person))
   const strings = new Set(groups.map(group => normalizeGroupUri(group.uri))) // remove dups with normalized URIs
   groups = [...strings].map(uri => store.sym(uri))
@@ -31,7 +31,7 @@ export function groupMembership (person, store = kb) {
  *   that the list on the left reflects the change.  If `null` this behaviour
  *   is skipped.
  */
-export async function renderGroupMemberships (person, context, ulPeople) {
+export async function renderGroupMemberships (person: any, context: any, ulPeople?: any) {
   // keep a reference to the people list (if any) so callers can ask us to
   // refresh it when group membership changes.  The callers that render an
   // address-book view pass their `ulPeople` element; other consumers may not
@@ -45,7 +45,7 @@ export async function renderGroupMemberships (person, context, ulPeople) {
     // find all WebIDs of thing
     const thingwebids = kb.each(null, ns.owl('sameAs'), person, group.doc())
     // WebID can be deleted only if not used in another thing
-    let webids = []
+    let webids: any[] = []
     thingwebids.forEach(webid => {
       if (kb.statementsMatching(webid, ns.owl('sameAs'), person, group.doc())) webids = webids.concat(webid)
     })
@@ -122,7 +122,7 @@ export async function renderGroupMemberships (person, context, ulPeople) {
         dom,
         toolbar,
         'membership in ' + label,
-        async function () {
+        async () => {
           // async operation handles its own refresh once the group doc has
           // been reloaded
           await removeFromGroup(person, group)
@@ -137,7 +137,7 @@ export async function renderGroupMemberships (person, context, ulPeople) {
     return li
   }
 
-  function syncGroupPills (groups = null) {
+  function syncGroupPills (groups: any = null) {
     // Clear previous render so we don't keep appending duplicate headers / lists
     container.innerHTML = ''
 

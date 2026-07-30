@@ -26,7 +26,7 @@ const openAlerts = new Map()
  * @param {string} [title]
  * @returns {Promise<true>}
  */
-export function alertDialog (message, title = 'Information') {
+export function alertDialog (message: string, title = 'Information'): Promise<true> {
   const key = JSON.stringify([title, message])
   const alreadyOpen = openAlerts.get(key)
 
@@ -34,7 +34,7 @@ export function alertDialog (message, title = 'Information') {
     return alreadyOpen
   }
 
-  const shown = new Promise(resolve => {
+  const shown = new Promise<true>(resolve => {
     UI.showDialog(AlertModal, {
       props: { message, title },
       onClose: () => {
@@ -56,7 +56,7 @@ export function alertDialog (message, title = 'Information') {
  * @param {string} [title]
  * @returns {Promise<boolean>}
  */
-export function confirmDialog (message, title = 'Confirm') {
+export function confirmDialog (message: string, title = 'Confirm'): Promise<boolean> {
   return new Promise(resolve => {
     UI.showDialog(ConfirmModal, {
       props: { message, title },
@@ -74,14 +74,14 @@ export function confirmDialog (message, title = 'Confirm') {
  * @param {string} uri - The group URI to normalize
  * @returns {string} The normalized group URI
  */
-export function normalizeGroupUri (uri) {
+export function normalizeGroupUri (uri: string) {
   if (uri && uri.endsWith('.ttl')) {
     return uri + '#this'
   }
   return uri
 }
 
-export function complain (div, d, message) {
+export function complain (div: any, d: any, message: string) {
   div.appendChild(UI.widgets.errorMessageBlock(d, message, 'pink'))
 }
 
@@ -94,10 +94,10 @@ export function complain (div, d, message) {
  * @param {NamedNode} subject
  * @returns {Promise<'public' | 'private' | null>}
  */
-export function documentVisibility (subject) {
+export function documentVisibility (subject: any): Promise<'public' | 'private' | null> {
   const doc = subject.doc()
   return new Promise(resolve => {
-    UI.acl.getACLorDefault(doc, (ok, exists, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc) => {
+    UI.acl.getACLorDefault(doc, (ok, exists, targetDoc: any, targetACLDoc: any, defaultHolder: any, defaultACLDoc: any) => {
       // Reading an ACL needs Control access; a visitor without it can still
       // learn the answer from the outside.
       if (!ok) return resolve(anonymousVisibility(doc))
@@ -111,7 +111,7 @@ export function documentVisibility (subject) {
 }
 
 /** Public iff the document answers a request that carries no credentials. */
-async function anonymousVisibility (doc) {
+async function anonymousVisibility (doc: any): Promise<'public' | 'private' | null> {
   try {
     const response = await fetch(doc.uri, { method: 'HEAD', credentials: 'omit' })
     if (response.ok) return 'public'
@@ -122,15 +122,15 @@ async function anonymousVisibility (doc) {
   }
 }
 
-export function getSameAs (kb, item, doc) {
+export function getSameAs (kb: any, item: any, doc: any) {
   return kb.each(item, ns.owl('sameAs'), null, doc).concat(
     kb.each(null, ns.owl('sameAs'), item, doc))
 }
 //  For deleting an addressbook sub-folder eg person - use with care!
 // @@ move to solid-logic
-export function deleteRecursive (kb, folder) {
-  return new Promise(function (resolve, reject) {
-    kb.fetcher.load(folder).then(function () {
+export function deleteRecursive (kb: any, folder: any) {
+  return new Promise<void>((resolve, reject) => {
+    kb.fetcher.load(folder).then(() => {
       const promises = kb.each(folder, ns.ldp('contains')).map(file => {
         if (kb.holds(file, ns.rdf('type'), ns.ldp('BasicContainer'))) {
           return deleteRecursive(kb, file)
@@ -154,13 +154,13 @@ export function deleteRecursive (kb, folder) {
 // together and then deleted.
 // Callers are responsible for confirming with the user first -- renderDeleteButton
 // does that -- so this deletes without asking.
-export async function deleteThingAndDoc (x) {
+export async function deleteThingAndDoc (x: any) {
   debug.log('deleteThingAndDoc - to be deleted ' + x)
   // Statements in x's own document go down with it; only mentions elsewhere
   // (the indexes, group membership) need patching out.
   const ds = kb.statementsMatching(x)
     .concat(kb.statementsMatching(undefined, undefined, x))
-    .filter(st => !st.why.sameTerm(x.doc()))
+    .filter((st: any) => !st.why.sameTerm(x.doc()))
   try {
     // Document first: if this fails, the thing is still intact everywhere.
     // The reverse order left invisible orphans -- gone from the indexes, but
@@ -174,7 +174,7 @@ export async function deleteThingAndDoc (x) {
   }
 }
 
-export function compareForSort (self, other) {
+export function compareForSort (self: any, other: any) {
   let s = nameFor(self)
   let o = nameFor(other)
   if (s && o) {
@@ -189,7 +189,7 @@ export function compareForSort (self, other) {
 }
 
 // organization-name is a hack for Mac records with no FN which is mandatory.
-export function nameFor (x) {
+export function nameFor (x: any) {
   const name =
     kb.any(x, ns.vcard('fn')) ||
     kb.any(x, ns.foaf('name')) ||
@@ -201,7 +201,7 @@ export function nameFor (x) {
  * Prevent keyboard tabbing into labels/label-like links created by rdflib/solid-ui forms.
  * @param {HTMLElement} root
  */
-export function skipLabelsFromTabbing (root) {
+export function skipLabelsFromTabbing (root: any) {
   // Many Solid-UI forms render field labels as focusable links (hrefs).
   // Make sure keyboard tabbing skips these label links entirely.
   const selectors = [
@@ -219,7 +219,7 @@ export function skipLabelsFromTabbing (root) {
   const nodes = root?.querySelectorAll?.(selectors)
   if (!nodes) return
 
-  Array.from(nodes).forEach(el => {
+  Array.from(nodes).forEach((el: any) => {
     // Some browsers may return null for tabIndex, and some elements may not
     // expose tabIndex at all (e.g., SVG elements), so guard before setting.
     if (typeof el.tabIndex === 'number' && el.tabIndex !== -1) {
@@ -232,13 +232,13 @@ export function skipLabelsFromTabbing (root) {
   })
 }
 
-export function isAWebID (subject) {
+export function isAWebID (subject: any) {
   const t = kb.findTypeURIs(subject.doc())
   return !!t[ns.foaf('PersonalProfileDocument').uri]
 }
 
 // Make the layout stack vertically when the containing pane gets narrow
-export function setupResponsiveStacking (paneDiv, breakpoint = 900) {
+export function setupResponsiveStacking (paneDiv: any, breakpoint = 900) {
   function updateResponsiveState () {
     const width = paneDiv.getBoundingClientRect().width
     const paneNarrow = width > 0 ? width <= breakpoint : false
@@ -285,9 +285,9 @@ export function setupResponsiveStacking (paneDiv, breakpoint = 900) {
   }
 
   // Debounce utility
-  function debounce (fn, delay) {
-    let timer = null
-    return function (...args) {
+  function debounce (fn: (...args: any[]) => void, delay: number) {
+    let timer: any = null
+    return function (this: any, ...args: any[]) {
       clearTimeout(timer)
       timer = setTimeout(() => fn.apply(this, args), delay)
     }

@@ -7,13 +7,13 @@ import { renderDeleteButton } from './components/delete-button'
 import { groupMembership } from './groupMembershipControl'
 
 const ns = UI.ns
-const kb = store
-let dom
-let selectedGroups = {}
-let ulPeople = null
-let cardMain = null
-let book = null
-let dataBrowserContext = null
+const kb = store as any
+let dom: any
+let selectedGroups: any = {}
+let ulPeople: any = null
+let cardMain: any = null
+let book: any = null
+let dataBrowserContext: any = null
 
 // ######## Group presenter
 
@@ -54,8 +54,8 @@ export async function handleURIsDroppedOnGroup (uris, group) {
   }
 }
 
-export function groupsInOrder (book, options) {
-  let sortMe = []
+export function groupsInOrder (book: any, options: any) {
+  let sortMe: any[] = []
   if (options.foreignGroup) {
     sortMe.push([
       '',
@@ -66,9 +66,7 @@ export function groupsInOrder (book, options) {
   if (book) {
     const groupIndex = kb.any(book, ns.vcard('groupIndex'))
     const gs = book ? kb.each(book, ns.vcard('includesGroup'), null, groupIndex) : []
-    const gs2 = gs.map(function (g) {
-      return [book, kb.any(g, ns.vcard('fn')), g]
-    })
+    const gs2 = gs.map((g: any) => [book, kb.any(g, ns.vcard('fn')), g])
     sortMe = sortMe.concat(gs2)
     sortMe.sort()
   }
@@ -112,7 +110,7 @@ export function findBookFromGroups (book) {
  * falls back to the module variable for callers that don't hold the element.
  * `detailsView` is unused but kept so existing call sites stay valid.
  */
-export function refreshNames (ulPeopleArg, detailsView, autoSelect = true) {
+export function refreshNames (ulPeopleArg: any, detailsView: any = null, autoSelect = true) {
   const list = ulPeopleArg || ulPeople
 
   if (!list || typeof list.refresh !== 'function') {
@@ -137,10 +135,7 @@ export function selectPerson (ulPeopleArg, person, details) {
     details.showError('Cannot load contact: ' + err.message)
     return
   }
-  kb.fetcher.nowOrWhenFetched(local.doc(), undefined, function (
-    ok,
-    message
-  ) {
+  kb.fetcher.nowOrWhenFetched(local.doc(), undefined, (ok: boolean, message: string) => {
     if (!ok) {
       debug.error('Failed to load contact card: ' + local + '. Stack: ' + message)
       details.showError('Failed to load contact. If it persists, contact your admin.')

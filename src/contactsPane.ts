@@ -31,7 +31,7 @@ export default {
   global: false,
 
   // Does the subject deserve a contact pane?
-  label: function (subject, context) {
+  label (subject: any, context: any) {
     const t = context.session.store.findTypeURIs(subject)
     // with the new design we only display Address Books
     // individuals are rendered through the profile-pane but not Organizations
@@ -45,7 +45,7 @@ export default {
   mintNew: mintNewAddressBook, // Make a new address book
 
   //  Render the pane
-  render: function (subject, dataBrowserContext, paneOptions = {}) {
+  render (subject: any, dataBrowserContext: any, paneOptions: any = {}) {
     const dom = dataBrowserContext.dom
     const kb = dataBrowserContext.session.store
     const div = dom.createElement('div')

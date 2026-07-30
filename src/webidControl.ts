@@ -10,7 +10,7 @@ import * as debug from './debug'
 const ns = UI.ns
 const widgets = UI.widgets
 const utils = UI.utils
-const kb = store
+const kb = store as any
 
 const wikidataClasses = widgets.publicData.wikidataClasses // @@ move to solid-logic
 const wikidataParameters = widgets.publicData.wikidataParameters // @@ move to solid-logic
@@ -35,8 +35,7 @@ export async function addWebIDToContacts (person, webid, urlType, kb) {
 
   // check this is a url
   try {
-    // eslint-disable-next-line no-unused-vars
-    const _url = new URL(webid)
+    new URL(webid) // eslint-disable-line no-new -- throws when invalid
   } catch (error) {
     throw new Error(`${WEBID_NOUN}: ${webid} is not a valid url.`)
   }
@@ -84,15 +83,15 @@ export async function removeWebIDFromContacts (person, webid, urlType, kb) {
 
   // remove webIDs from groups
   const groups = kb.each(null, ns.vcard('hasMember'), kb.sym(webid))
-  let removeFromGroups = []
-  const insertInGroups = []
-  groups.forEach(async group => {
+  let removeFromGroups: any[] = []
+  const insertInGroups: any[] = []
+  for (const group of groups) {
     removeFromGroups = removeFromGroups.concat(kb.statementsMatching(kb.sym(webid), ns.owl('sameAs'), person, group.doc()))
     insertInGroups.push($rdf.st(group, ns.vcard('hasMember'), person, group.doc()))
     if (kb.statementsMatching(kb.sym(webid), ns.owl('sameAs'), null, group.doc()).length < 2) {
       removeFromGroups = removeFromGroups.concat(kb.statementsMatching(group, ns.vcard('hasMember'), kb.sym(webid), group.doc()))
     }
-  })
+  }
   await updateMany(removeFromGroups, insertInGroups)
 }
 
@@ -135,7 +134,7 @@ export function getPersonas (kb, person) {
   return personas
 }
 
-export function vcardWebIDs (kb, person, urlType) {
+export function vcardWebIDs (kb: any, person: any, urlType?: any) {
   return kb.each(person, ns.vcard('url'), null, person.doc())
     .filter(urlObject => kb.holds(urlObject, ns.rdf('type'), urlType, person.doc()))
     .map(urlObject => kb.any(urlObject, ns.vcard('value'), null, person.doc()))
@@ -215,7 +214,7 @@ export async function renderIdControl (person, dataBrowserContext, options) {
       }
       const isWebId = options.urlType.sameTerm(ns.vcard('WebID'))
       const delFunParam = options.editable ? deleteFunction : null
-      const opts = { deleteFunction: delFunParam, draggable: true }
+      const opts: any = { deleteFunction: delFunParam, draggable: true }
       if (isWebId) {
         opts.title = webidObject.uri.split('/')[2]
         opts.image = widgets.faviconOrDefault(dom, webidObject.site()) // just for domain

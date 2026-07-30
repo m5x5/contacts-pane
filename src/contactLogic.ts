@@ -7,14 +7,14 @@ import { getSameAs, confirmDialog, alertDialog } from './localUtils'
 
 const ns = UI.ns
 const utils = UI.utils
-const kb = store
+const kb = store as any
 const updater = kb.updater
 
 /** Perform updates on more than one document   @@ Move to rdflib!
 */
-export async function updateMany (deletions, insertions = []) {
+export async function updateMany (deletions: any[], insertions: any[] = []) {
   const docs = deletions.concat(insertions).map(st => st.why)
-  const uniqueDocs = []
+  const uniqueDocs: any[] = []
   docs.forEach(doc => {
     if (!uniqueDocs.find(uniqueDoc => uniqueDoc.equals(doc))) uniqueDocs.push(doc)
   })
@@ -29,7 +29,7 @@ export async function updateMany (deletions, insertions = []) {
 * adds them to the given groups as well.
 * @returns {NamedNode} the person
 */
-export async function saveNewContact (book, name, selectedGroups, klass) {
+export async function saveNewContact (book: any, name: string, selectedGroups: any, klass: any) {
   await kb.fetcher.load(book.doc())
   const nameEmailIndex = kb.any(book, ns.vcard('nameEmailIndex'))
 
@@ -43,12 +43,12 @@ export async function saveNewContact (book, name, selectedGroups, klass) {
   const agenda = [
     // Patch the main index to add the person
     $rdf.st(person, ns.vcard('inAddressBook'), book, nameEmailIndex), // The people index
-    $rdf.st(person, ns.vcard('fn'), name, nameEmailIndex),
+    $rdf.st(person, ns.vcard('fn'), name as any, nameEmailIndex),
     // The new person file
-    $rdf.st(person, ns.vcard('fn'), name, doc),
+    $rdf.st(person, ns.vcard('fn'), name as any, doc),
     $rdf.st(person, ns.rdf('type'), klass, doc),
 
-    $rdf.st(doc, ns.dct('created'), new Date(), doc) // Note when created - useful for triaging later
+    $rdf.st(doc, ns.dct('created'), new Date() as any, doc) // Note when created - useful for triaging later
     // Note this is propert of the file -- not when the person was created!
   ]
 
@@ -66,7 +66,7 @@ export async function saveNewContact (book, name, selectedGroups, klass) {
       const gd = g.doc()
       agenda.push(
         $rdf.st(g, ns.vcard('hasMember'), person, gd),
-        $rdf.st(person, ns.vcard('fn'), name, gd)
+        $rdf.st(person, ns.vcard('fn'), name as any, gd)
       )
     }
   } else {
@@ -83,7 +83,7 @@ export async function saveNewContact (book, name, selectedGroups, klass) {
   return person
 }
 
-export function sanitizeToAlpha (name) { // https://mathiasbynens.be/notes/es6-unicode-regex
+export function sanitizeToAlpha (name: string) { // https://mathiasbynens.be/notes/es6-unicode-regex
   const n2 = name.replace(/\W/gu, '_') // Anything which is not a unicode word characeter
   return n2.replace(/_+/g, '_') // https://www.regular-expressions.info/shorthand.html
 }
@@ -92,7 +92,7 @@ export function sanitizeToAlpha (name) { // https://mathiasbynens.be/notes/es6-u
  * Creates an empty new group file and adds it to the index
  * @returns group
 */
-export async function saveNewGroup (book, name) {
+export async function saveNewGroup (book: any, name: string) {
   await kb.fetcher.load(book.doc())
   const gix = kb.any(book, ns.vcard('groupIndex'))
 
@@ -111,7 +111,7 @@ export async function saveNewGroup (book, name) {
   const insertTriples = [
     $rdf.st(book, ns.vcard('includesGroup'), group, gix),
     $rdf.st(group, ns.rdf('type'), ns.vcard('Group'), gix),
-    $rdf.st(group, ns.vcard('fn'), name, gix)
+    $rdf.st(group, ns.vcard('fn'), name as any, gix)
   ]
   try {
     await updater.update([], insertTriples)
@@ -122,7 +122,7 @@ export async function saveNewGroup (book, name) {
   const triples = [
     $rdf.st(book, ns.vcard('includesGroup'), group, doc), // Pointer back to book
     $rdf.st(group, ns.rdf('type'), ns.vcard('Group'), doc),
-    $rdf.st(group, ns.vcard('fn'), name, doc)
+    $rdf.st(group, ns.vcard('fn'), name as any, doc)
   ]
   try {
     await updater.update([], triples)
@@ -132,7 +132,7 @@ export async function saveNewGroup (book, name) {
   return group
 }
 
-export async function addPersonToGroup (thing, group) {
+export async function addPersonToGroup (thing: any, group: any) {
   const toBeFetched = [thing.doc(), group.doc()]
   try {
     await kb.fetcher.load(toBeFetched)
@@ -193,9 +193,9 @@ export async function addPersonToGroup (thing, group) {
  * Find persons member of a group
  */
 
-export function groupMembers (kb, group) {
+export function groupMembers (kb: any, group: any) {
   const a = kb.each(group, ns.vcard('hasMember'), null, group.doc())
-  let b = []
+  let b: any[] = []
   a.forEach(item => {
     /* const contacts = kb.each(item, ns.owl('sameAs'), null, group.doc())
     if (contacts.length) {
@@ -213,16 +213,16 @@ export function groupMembers (kb, group) {
   return b
 }
 
-export function isLocal (group, item) {
+export function isLocal (group: any, item: any) {
   const tree = group.dir().dir().dir()
   const local = item.uri && item.uri.startsWith(tree.uri)
   // debug.log(`   isLocal ${local} for ${item.uri} in group ${group} tree ${tree.uri}`)
   return local
 }
 
-export async function getDataModelIssues (groups) {
-  const del = []
-  const ins = []
+export async function getDataModelIssues (groups: any[]) {
+  const del: any[] = []
+  const ins: any[] = []
   groups.forEach(group => {
     const members = kb.each(group, ns.vcard('hasMember'), null, group.doc())
     members.forEach((member) => {

@@ -9,7 +9,7 @@ import { saveNewGroup, addPersonToGroup, groupMembers } from './contactLogic'
 import { normalizeGroupUri } from './localUtils'
 import * as debug from './debug'
 
-const kb = store
+const kb = store as any
 const ns = UI.ns
 const VCARD = ns.vcard
 
@@ -32,7 +32,7 @@ export function showStats (book, selectedGroups, log) {
 /** Repair the ACL of every card in the selected groups. */
 export function checkAccess (selectedGroups, log) {
   function doCard (card) {
-    UI.acl.fixIndividualCardACL(card, message => log(message), function (ok, message) {
+    UI.acl.fixIndividualCardACL(card, (message: string) => log(message), (ok: boolean, message: any) => {
       if (ok) {
         log('Success for ' + UI.utils.label(card))
       } else {
@@ -73,8 +73,8 @@ export async function findGroupless (book, log) {
     log('Error loading groups or name index. If it persists, contact your admin.')
   }
 
-  const reverseIndex = {}
-  const groupless = []
+  const reverseIndex: any = {}
+  const groupless: any[] = []
   const groups = dedupedGroups(book)
   log('' + groups.length + ' total groups. ')
 
@@ -82,7 +82,7 @@ export async function findGroupless (book, log) {
     const members = groupMembers(kb, group)
     log(UI.utils.label(group) + ': ' + members.length + ' members')
     for (const member of members) {
-      kb.allAliases(member).forEach(function (alias) {
+      kb.allAliases(member).forEach((alias: any) => {
         reverseIndex[alias.uri] = group
       })
     }
@@ -133,7 +133,7 @@ export async function fixGroupless (book, log, confirm) {
 /** Scan the whole book for duplicate and nameless contacts, then write a
  * cleaned-up index and cleaned-up copies of every group. */
 export async function findDuplicates (book, log, confirm) {
-  const s = {
+  const s: any = {
     book,
     cards: [],
     duplicates: [],
@@ -278,7 +278,7 @@ async function checkOneNameless (s, card, log) {
   }
 
   // Cheat: serialize and compare
-  const cardText = new $rdf.Serializer(kb)
+  const cardText = new ($rdf.Serializer as any)(kb)
     .setBase(card.doc().uri)
     .statementsToN3(desc)
   const other = s.nameLessIndex[cardText]
@@ -316,7 +316,7 @@ async function saveCleanPeople (s, log) {
     for (const unique of s.uniques) {
       sts = sts.concat(kb.connectedStatements(unique, s.nameEmailIndex))
     }
-    const sz = new $rdf.Serializer(kb).setBase(s.nameEmailIndex.uri)
+    const sz = new ($rdf.Serializer as any)(kb).setBase(s.nameEmailIndex.uri)
     log('Serializing index of uniques...')
     const data = sz.statementsToN3(sts)
 
@@ -337,7 +337,7 @@ async function saveCleanGroup (s, log, group) {
     for (const unique of s.uniques) {
       sts = sts.concat(kb.connectedStatements(unique, group.doc()))
     }
-    const sz = new $rdf.Serializer(kb).setBase(group.uri)
+    const sz = new ($rdf.Serializer as any)(kb).setBase(group.uri)
     log('   Regenerating group of uniques...' + cleanGroup)
     const data = sz.statementsToN3(sts)
 

@@ -31,7 +31,7 @@ const mime = {
 
 const ns = UI.ns
 const utils = UI.utils
-const kb = store
+const kb = store as any
 
 /*  Mugshot Gallery
 *
@@ -43,7 +43,7 @@ export function renderMugshotGallery (dom, subject) {
     galleryDiv.appendChild(UI.widgets.errorMessageBlock(dom, message, 'pink'))
   }
 
-  async function linkToPicture (subject, pic, remove) {
+  async function linkToPicture (subject: any, pic: any, remove?: boolean) {
     const link = [
       $rdf.st(subject, ns.vcard('hasPhoto'), pic, subject.doc())
     ]
@@ -61,7 +61,7 @@ export function renderMugshotGallery (dom, subject) {
   }
 
   function handleDroppedThing (thing) {
-    kb.fetcher.nowOrWhenFetched(thing.doc(), function (ok, mess) {
+    kb.fetcher.nowOrWhenFetched(thing.doc(), (ok: boolean, mess: string) => {
       if (!ok) {
         debug.error('Error looking up dropped thing ' + thing + '. Stack: ' + mess)
       } else {
@@ -115,7 +115,7 @@ export function renderMugshotGallery (dom, subject) {
         data,
         contentType
       })
-      .then(function (response) {
+      .then((response: any) => {
         if (!response.ok) {
           debug.error('Upload of ' + pic + ' failed: ' + response.status + ' ' + response.statusText)
           localComplain('Error uploading picture. If the problem persists, contact admin.')
@@ -126,12 +126,12 @@ export function renderMugshotGallery (dom, subject) {
         kb.fetcher
           .putBack(subject.doc(), { contentType: 'text/turtle' })
           .then(
-            function (_response) {
+            (_response: any) => {
               if (isImage) {
                 mugshotDiv.refresh()
               }
             },
-            function (err) {
+            (err: any) => {
               debug.error(' Write back image link FAIL ' + pic + '. Stack: ' + err)
             }
           )
@@ -194,21 +194,18 @@ export function renderMugshotGallery (dom, subject) {
       ) // See e.g. https://www.html5rocks.com/en/tutorials/file/dndfiles/
 
       // @@ Add: progress bar(s)
+      // (`f` is block-scoped, so no closure trick is needed to capture it.)
       const reader = new FileReader()
-      reader.onload = (function (theFile) {
-        return function (e) {
-          const data = e.target.result
-          debug.log(' File read byteLength : ' + data.byteLength)
-          const filename = encodeURIComponent(theFile.name)
-          const contentType = theFile.type
-          uploadFileToContact(filename, contentType, data)
-        }
-      })(f)
+      reader.onload = (e: any) => {
+        const data = e.target.result
+        debug.log(' File read byteLength : ' + data.byteLength)
+        uploadFileToContact(encodeURIComponent(f.name), f.type, data)
+      }
       reader.readAsArrayBuffer(f)
     }
   }
 
-  function elementForImage (image) {
+  function elementForImage (image?: any) {
     const img = dom.createElement('img')
     img.classList.add('mugshotImage')
     img.setAttribute('alt', image ? 'Contact photo' : 'Drop photo here')
@@ -221,10 +218,8 @@ export function renderMugshotGallery (dom, subject) {
       // img.setAttribute('src', image.uri) use token and works with NSS but not with CSS
       // we need to get image with authenticated fetch
       store.fetcher._fetch(image.uri)
-        .then(function (response) {
-          return response.blob()
-        })
-        .then(function (myBlob) {
+        .then((response: any) => response.blob())
+        .then((myBlob: Blob) => {
           const objectURL = URL.createObjectURL(myBlob)
           img.setAttribute('src', objectURL)
         })
