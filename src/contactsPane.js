@@ -10,7 +10,6 @@ to change its state according to an ontology, comment on it, etc.
 **
 */
 
-import { html } from 'lit'
 import { authn } from 'solid-logic'
 import { saveNewGroup } from './contactLogic'
 import * as UI from 'solid-ui'
@@ -29,7 +28,7 @@ import { alertDialog, complain, deleteThingAndDoc, setDom, setupResponsiveStacki
 import * as debug from './debug'
 import './styles/contactsRDFFormsEnforced.css'
 
-import './components/add-contact-modal'
+import AddContactModal from './components/add-contact-modal'
 
 const ns = UI.ns
 const utils = UI.utils
@@ -413,10 +412,11 @@ function buildHeaderSection (ctx) {
   newContactButton.addEventListener('click', async function (_event) {
     const { book, selectedGroups } = ctx
 
-    UI.showDialog(html`<solid-contacts-pane-add-contact-modal
-        .book=${book}
-        .selectedGroups=${selectedGroups}
-      ></solid-contacts-pane-add-contact-modal>`, {
+    UI.showDialog(AddContactModal, {
+      props: {
+        book,
+        selectedGroups
+      },
       onClose (person) {
         if (!person) {
           return
