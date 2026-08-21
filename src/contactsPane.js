@@ -246,7 +246,7 @@ export default {
         const detailsSectionContent = dom.createElement('div')
         detailsSectionContent.classList.add('detailsSectionContent')
         detailsSectionContent.setAttribute('role', 'region')
-        detailsSectionContent.setAttribute('aria-labelledby', 'detailsSectionContent')
+        detailsSectionContent.setAttribute('aria-label', 'Details content')
         detailsSectionContent.setAttribute('aria-live', 'polite')
         ctx.detailsSectionContent = detailsSectionContent
 
@@ -365,7 +365,8 @@ function buildMainLayout (ctx) {
   main.setAttribute('tabindex', '-1')
 
   const addressBookSection = dom.createElement('section')
-  addressBookSection.setAttribute('aria-labelledby', 'addressBook-section')
+  // Reference the real heading id so this region landmark has an accessible name.
+  addressBookSection.setAttribute('aria-labelledby', 'addressBook-heading')
   addressBookSection.classList.add('addressBookSection', 'section-bg')
   addressBookSection.setAttribute('role', 'region')
   addressBookSection.setAttribute('tabindex', '-1')
