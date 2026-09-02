@@ -52,9 +52,15 @@ li.personLi--error {
     object-fit: cover;
 }
 
-.avatar svg {
-    display: block;
+/* Placeholder for contacts without a picture: the same box an image fills. */
+.avatar .avatarFallback {
+    width: 2.5rem /* 40px */;
+    height: 2.5rem /* 40px */;
+    padding: 0.5rem;
+    box-sizing: border-box;
     border-radius: 10px;
+    background: var(--solid-ui-color-gray-200, #e0e0e0);
+    color: var(--solid-ui-color-gray-600, #595959);
 }
 
 .identity {

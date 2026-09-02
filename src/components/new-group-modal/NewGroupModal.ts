@@ -1,3 +1,4 @@
+import type { NamedNode } from 'rdflib'
 import { html, nothing } from 'lit'
 import { state, property } from 'lit/decorators.js'
 import { customElement, DialogComponent } from 'solid-ui'
@@ -13,14 +14,14 @@ import 'solid-ui/components/button'
 
 import styles from './NewGroupModal.styles.css'
 
-type Group = any
+type Group = NamedNode
 
 @customElement('contacts-pane-new-group-modal')
 export default class NewGroupModal extends DialogComponent<Group> {
   static styles = styles
 
   @property()
-  accessor book: unknown | null = null;
+  accessor book: NamedNode | null = null;
 
   @state()
   private accessor name = '';
@@ -70,6 +71,9 @@ export default class NewGroupModal extends DialogComponent<Group> {
     this.loading = true
 
     try {
+      if (!this.book) {
+        throw new Error('Book is required for <contacts-pane-new-group-modal>')
+      }
       const group = await saveNewGroup(this.book, this.name)
 
       this.close(group)

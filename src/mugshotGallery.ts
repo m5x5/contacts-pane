@@ -1,6 +1,7 @@
 import * as UI from 'solid-ui'
 import { store } from 'solid-logic'
 import * as $rdf from 'rdflib'
+import type { NamedNode } from 'rdflib'
 import './styles/mugshotGallery.css'
 import * as debug from './debug'
 import { confirmDialog, alertDialog } from './localUtils'
@@ -22,24 +23,24 @@ const mimeMap = {
 }
 const extMap = Object.fromEntries(Object.entries(mimeMap).map(([k, v]) => [v, k]))
 const mime = {
-  extension: (contentType) => mimeMap[contentType] || false,
-  lookup: (filename) => {
-    const ext = filename.split('.').pop().toLowerCase()
+  extension: (contentType: string) => (mimeMap as Record<string, string>)[contentType] || false,
+  lookup: (filename: string) => {
+    const ext = filename.split('.').pop()?.toLowerCase() ?? ''
     return extMap[ext] || false
   }
 }
 
 const ns = UI.ns
 const utils = UI.utils
-const kb = store as any
+const kb = store
 
 /*  Mugshot Gallery
 *
 * A widget for managing a set of images.
 * Make this a form field?
 */
-export function renderMugshotGallery (dom, subject) {
-  function localComplain (message) {
+export function renderMugshotGallery (dom: any, subject: NamedNode) {
+  function localComplain (message: string) {
     galleryDiv.appendChild(UI.widgets.errorMessageBlock(dom, message, 'pink'))
   }
 
@@ -60,7 +61,7 @@ export function renderMugshotGallery (dom, subject) {
     }
   }
 
-  function handleDroppedThing (thing) {
+  function handleDroppedThing (thing: NamedNode) {
     kb.fetcher.nowOrWhenFetched(thing.doc(), (ok: boolean, mess: string) => {
       if (!ok) {
         debug.error('Error looking up dropped thing ' + thing + '. Stack: ' + mess)
@@ -76,7 +77,7 @@ export function renderMugshotGallery (dom, subject) {
     })
   }
 
-  function uploadFileToContact (filename, contentType, data) {
+  function uploadFileToContact (filename: string, contentType: string, data: ArrayBuffer) {
     // const fileExtension = filename.split('.').pop() // .toLowerCase()
     const extension = mime.extension(contentType)
     if (contentType !== mime.lookup(filename)) {
@@ -96,7 +97,7 @@ export function renderMugshotGallery (dom, subject) {
     let n, pic
     for (n = 0; ; n++) {
       // Check filename is not used or invent new one
-      pic = kb.sym(subject.dir().uri + filename)
+      pic = kb.sym(subject.dir()!.uri + filename)
       if (!kb.holds(subject, ns.vcard('hasPhoto'), pic)) {
         break
       }
@@ -112,7 +113,7 @@ export function renderMugshotGallery (dom, subject) {
     )
     kb.fetcher
       .webOperation('PUT', pic.uri, {
-        data,
+        data: data as unknown as string,
         contentType
       })
       .then((response: any) => {
@@ -139,7 +140,7 @@ export function renderMugshotGallery (dom, subject) {
   }
 
   // When a set of URIs are dropped on
-  async function handleURIsDroppedOnMugshot (uris) {
+  async function handleURIsDroppedOnMugshot (uris: string[]) {
     for (const u of uris) {
       let thing = $rdf.sym(u) // Attachment needs text label to disinguish I think not icon.
       debug.log('Dropped on mugshot thing ' + thing) // icon was: UI.icons.iconBase + 'noun_25830.svg'
@@ -149,7 +150,7 @@ export function renderMugshotGallery (dom, subject) {
         if (u.startsWith('http:')) { // because of browser mixed content stuff can't read http:
           thing = $rdf.sym('https:' + u.slice(5))
         }
-        const options = { withCredentials: false, credentials: 'omit' }
+        const options = { withCredentials: false, credentials: 'omit' as const }
         let result
         try {
           result = await kb.fetcher.webOperation('GET', thing.uri, options)
@@ -158,7 +159,7 @@ export function renderMugshotGallery (dom, subject) {
           handleDroppedThing(thing)
           return
         }
-        const contentType = result.headers.get('Content-Type')
+        const contentType = result.headers.get('Content-Type') ?? 'application/octet-stream'
         let pathEnd = thing.uri.split('/').slice(-1)[0] // last segment as putative filename
         pathEnd = pathEnd.split('?')[0] // chop off any query params
         const data = await result.arrayBuffer()
@@ -177,7 +178,7 @@ export function renderMugshotGallery (dom, subject) {
   }
 
   // Drop an image file to set up the mugshot
-  function droppedFileHandler (files) {
+  function droppedFileHandler (files: FileList) {
     for (let i = 0; i < files.length; i++) {
       const f = files[i]
       debug.log(
@@ -188,8 +189,8 @@ export function renderMugshotGallery (dom, subject) {
           ' size: ' +
           f.size +
           ' bytes, last modified: ' +
-          (f.lastModifiedDate
-            ? f.lastModifiedDate.toLocaleDateString()
+          ((f as any).lastModifiedDate
+            ? (f as any).lastModifiedDate.toLocaleDateString()
             : 'n/a')
       ) // See e.g. https://www.html5rocks.com/en/tutorials/file/dndfiles/
 
@@ -245,12 +246,12 @@ export function renderMugshotGallery (dom, subject) {
   // Good URI for a Camera picture
   function getImageDoc () {
     const imageDoc = kb.sym(
-      subject.dir().uri + 'Image_' + Date.now() + '.png'
+      subject.dir()!.uri + 'Image_' + Date.now() + '.png'
     )
     return imageDoc
   }
   // Store picture
-  async function tookPicture (imageDoc) {
+  async function tookPicture (imageDoc: NamedNode | undefined) {
     if (imageDoc) {
       await linkToPicture(subject, imageDoc)
       syncMugshots()
@@ -265,9 +266,8 @@ export function renderMugshotGallery (dom, subject) {
       undefined,
       { 'aria-label': 'Delete picture - drag picture here' }
     )
-    async function droppedURIHandler (uris) {
-      const images = kb
-        .each(subject, ns.vcard('hasPhoto'))
+    async function droppedURIHandler (uris: string[]) {
+      const images = (kb.each(subject, ns.vcard('hasPhoto')) as NamedNode[])
         .map(x => x.uri)
       for (const uri of uris) {
         if (!images.includes(uri)) {

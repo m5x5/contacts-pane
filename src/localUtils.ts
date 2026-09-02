@@ -131,7 +131,7 @@ export function getSameAs (kb: any, item: any, doc: any) {
 export function deleteRecursive (kb: any, folder: any) {
   return new Promise<void>((resolve, reject) => {
     kb.fetcher.load(folder).then(() => {
-      const promises = kb.each(folder, ns.ldp('contains')).map(file => {
+      const promises = kb.each(folder, ns.ldp('contains')).map((file: any) => {
         if (kb.holds(file, ns.rdf('type'), ns.ldp('BasicContainer'))) {
           return deleteRecursive(kb, file)
         } else {

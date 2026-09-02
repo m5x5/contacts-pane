@@ -1,4 +1,5 @@
 import { html, nothing, type PropertyValues } from 'lit'
+import type { NamedNode } from 'rdflib'
 import { keyed } from 'lit/directives/keyed.js'
 import { state, property } from 'lit/decorators.js'
 import { customElement, WebComponent, showDialog } from 'solid-ui'
@@ -8,30 +9,19 @@ import AddContactModal from '../add-contact-modal'
 import { documentVisibility } from '../../localUtils'
 
 import 'solid-ui/components/button'
-import 'solid-ui/components/icons'
+import '~icons/lucide/ellipsis-vertical'
+import '~icons/lucide/globe'
+import '~icons/lucide/lock'
+import '~icons/lucide/plus'
+import '~icons/lucide/search'
+import '~icons/lucide/trash-2'
 import 'solid-ui/components/menu'
 import 'solid-ui/components/menu-item'
 
 import styles from './AddressBookHeader.styles.css'
 
-type Person = any
+type Person = NamedNode
 type Visibility = 'public' | 'private' | null
-
-/** Globe and lock marks for the visibility badge, sized to its text. */
-const globeIcon = html`
-  <svg width="12" height="12" viewBox="5.5 3.5 13 13" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M12.0013 15.8337C15.223 15.8337 17.8346 13.222 17.8346 10.0003C17.8346 6.77866 15.223 4.16699 12.0013 4.16699C8.77964 4.16699 6.16797 6.77866 6.16797 10.0003C6.16797 13.222 8.77964 15.8337 12.0013 15.8337Z" stroke="currentColor" stroke-width="1.02083" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M12.0013 4.16699C10.5034 5.73975 9.66797 7.82842 9.66797 10.0003C9.66797 12.1722 10.5034 14.2609 12.0013 15.8337C13.4992 14.2609 14.3346 12.1722 14.3346 10.0003C14.3346 7.82842 13.4992 5.73975 12.0013 4.16699Z" stroke="currentColor" stroke-width="1.02083" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M6.16797 10H17.8346" stroke="currentColor" stroke-width="1.02083" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-`
-
-const lockIcon = html`
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-`
 
 /**
  * The address book's title bar: what is currently being shown, the button that
@@ -50,15 +40,15 @@ export default class AddressBookHeader extends WebComponent {
   @property()
   accessor selectedGroupName: string | null = null;
 
-  @property()
-  accessor book: unknown | null = null;
+  @property({ attribute: false })
+  accessor book: NamedNode | null = null;
 
-  @property()
-  accessor selectedGroups: unknown | null = null;
+  @property({ attribute: false })
+  accessor selectedGroups: Record<string, boolean> | null = null;
 
   /** Whose sharing the badge reports: the group in view, or the book. */
   @property({ attribute: false })
-  accessor aclSubject: any | null = null;
+  accessor aclSubject: NamedNode | null = null;
 
   @state()
   private accessor loggedIn = false;
@@ -198,7 +188,9 @@ export default class AddressBookHeader extends WebComponent {
 
     return html`
       <span class="badge ${isPublic ? 'badge--public' : 'badge--private'}">
-        ${isPublic ? globeIcon : lockIcon}
+        ${isPublic
+          ? html`<icon-lucide-globe aria-hidden="true"></icon-lucide-globe>`
+          : html`<icon-lucide-lock aria-hidden="true"></icon-lucide-lock>`}
         ${isPublic ? 'Public' : 'Private'}
       </span>
     `

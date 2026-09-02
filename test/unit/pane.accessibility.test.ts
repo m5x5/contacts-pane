@@ -7,6 +7,7 @@ import pane from '../../src/contactsPane'
 import type Search from '../../src/components/search'
 import type AddressBookHeader from '../../src/components/address-book-header'
 import type PeopleList from '../../src/components/people-list'
+import type DetailsSection from '../../src/components/details-section'
 import { sym, parse } from 'rdflib'
 import { context, doc, prefixes, web } from './setup'
 
@@ -108,6 +109,8 @@ describe('contacts-pane accessibility', () => {
     dialogConfig.onClose(person)
 
     expect(contactPaneRenderMock).toHaveBeenCalledWith(person, context)
+    const details = div.querySelector('contacts-pane-details') as DetailsSection
+    await details.updateComplete
     expect(div.querySelector('.detailsSectionContent--wide')).toBeTruthy()
     expect(div.querySelector('.detailsSectionContent')?.textContent).toContain('mock contact pane')
 

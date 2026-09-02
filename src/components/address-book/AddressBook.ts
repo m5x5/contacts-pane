@@ -1,4 +1,10 @@
 import { html } from 'lit'
+import type { NamedNode } from 'rdflib'
+import type { DataBrowserContext } from 'pane-registry'
+
+/** The pane's context, extended with the people list other modules reach
+ * for when they need to refresh it after a mutation. */
+type PaneContext = DataBrowserContext & { ulPeople?: PeopleList }
 import { state, property, query } from 'lit/decorators.js'
 import { customElement, WebComponent, showDialog, ns, aclControl, login, utils } from 'solid-ui'
 import { authn, store } from 'solid-logic'
@@ -27,7 +33,7 @@ import type Search from '../search'
 
 const kb = store
 
-type Node = any
+type Node = NamedNode
 type SelectedGroups = Record<string, boolean>
 
 /**
@@ -48,7 +54,7 @@ export default class AddressBook extends WebComponent {
   accessor options: { foreignGroup?: Node } = {};
 
   @property({ attribute: false })
-  accessor dataBrowserContext: any = null;
+  accessor dataBrowserContext: PaneContext | null = null;
 
   @property({ attribute: false })
   accessor paneOptions: { solo?: boolean } = {};
@@ -97,6 +103,15 @@ export default class AddressBook extends WebComponent {
   @query('contacts-pane-details')
   private accessor details!: DetailsSection;
 
+  /** The pane hands the context in before connecting the element; anything
+   * running later may rely on it. */
+  private get context (): PaneContext {
+    if (!this.dataBrowserContext) {
+      throw new Error('dataBrowserContext is required for <contacts-pane-address-book>')
+    }
+    return this.dataBrowserContext
+  }
+
   /** The grid is laid out by the pane's global stylesheet. */
   protected createRenderRoot () {
     return this
@@ -142,7 +157,7 @@ export default class AddressBook extends WebComponent {
       document.location &&
       ('' + document.location).slice(0, 16) === 'http://localhost'
     ) {
-      const inferredOwner = kb.any(book, ns.acl('owner')) // when testing on plane with no webid
+      const inferredOwner = kb.any(book, ns.acl('owner')) as NamedNode | null // when testing on plane with no webid
       if (inferredOwner) {
         this.me = inferredOwner
       }
@@ -179,10 +194,11 @@ export default class AddressBook extends WebComponent {
 
     checkDataModel(this.book, this.details).then(() => { debug.log('Async checkDataModel done.') })
 
-    const groupIndex = this.book && kb.any(this.book, ns.vcard('groupIndex'))
+    const groupIndex = this.book && (kb.any(this.book, ns.vcard('groupIndex')) as NamedNode | null)
     if (this.book) {
       if (groupIndex) {
-        kb.fetcher.nowOrWhenFetched(groupIndex.uri, this.book, (ok: boolean, body: string) => {
+        // rdflib's typings omit the referringTerm form of nowOrWhenFetched
+        ;(kb.fetcher as any).nowOrWhenFetched(groupIndex.uri, this.book, (ok: boolean, body: string) => {
           if (!ok) {
             debug.error('Error loading group index. Stack: ' + body)
             alertDialog('Error loading group index. If it persists, contact admin.')
@@ -205,7 +221,7 @@ export default class AddressBook extends WebComponent {
 
     return html`
       <main id="main-content" class="addressBook-grid" role="main" aria-label="Address Book" tabindex="-1">
-        <section class="addressBookSection section-bg" role="region" aria-labelledby="addressBook-section" tabindex="-1">
+        <section class="addressBookSection section-bg" role="region" aria-label="Groups" tabindex="-1">
           <contacts-pane-group-bar
             class="buttonSection"
             .heading=${this.heading}
@@ -331,7 +347,7 @@ export default class AddressBook extends WebComponent {
     refreshNames(this.peopleList, null, false)
 
     this.details.showContent(
-      aclControl.ACLControlBox5(group.doc(), this.dataBrowserContext, 'group', kb))
+      aclControl.ACLControlBox5(group.doc(), this.context, 'group', kb))
   }
 
   private async deleteSelectedGroup () {
@@ -363,8 +379,8 @@ export default class AddressBook extends WebComponent {
   private showNewContact (person: Node) {
     refreshNames(this.peopleList, null, false) // Add name to list of group
     this.peopleList.markSelected(person)
-    const contactPane = this.dataBrowserContext.session.paneRegistry.byName('contact')
-    const paneDiv = contactPane.render(person, this.dataBrowserContext)
+    const contactPane = this.context.session.paneRegistry.byName('contact')
+    const paneDiv = contactPane!.render(person, this.context)
     paneDiv.classList.add('renderPane')
     this.details.showContent(paneDiv, { wide: true, kind: 'contact' })
   }
@@ -377,7 +393,7 @@ export default class AddressBook extends WebComponent {
     const complainInto = (message: string) => complain(content, dom, message)
 
     content.appendChild(
-      aclControl.ACLControlBox5(this.book.dir(), this.dataBrowserContext, 'book', kb)
+      aclControl.ACLControlBox5(this.book!.dir()!, this.context, 'book', kb)
     )
 
     const sharingContext = {

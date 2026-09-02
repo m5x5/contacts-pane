@@ -1,4 +1,5 @@
 import { html, nothing } from 'lit'
+import type { NamedNode } from 'rdflib'
 import { state, property } from 'lit/decorators.js'
 import { customElement, WebComponent } from 'solid-ui'
 
@@ -10,13 +11,14 @@ import 'solid-ui/components/button'
 
 import styles from './Tools.styles.css'
 
-type Book = any
+type Book = NamedNode
 type SelectedGroups = Record<string, boolean>
 
 interface Action {
   id: string
   label: string
-  run: (tools: Tools) => unknown
+  /** Receives the book already null-checked by the click handler. */
+  run: (tools: Tools, book: Book) => unknown
 }
 
 /** The maintenance routines, in the order their buttons appear. */
@@ -24,12 +26,12 @@ const ACTIONS: Action[] = [
   {
     id: 'load-index',
     label: 'Load main index',
-    run: tools => toolsLogic.loadMainIndex(tools.book, tools.log)
+    run: (tools, book) => toolsLogic.loadMainIndex(book, tools.log)
   },
   {
     id: 'stats',
     label: 'Statistics',
-    run: tools => toolsLogic.showStats(tools.book, tools.selectedGroups, tools.log)
+    run: (tools, book) => toolsLogic.showStats(book, tools.selectedGroups, tools.log)
   },
   {
     id: 'check-access',
@@ -39,21 +41,21 @@ const ACTIONS: Action[] = [
   {
     id: 'find-duplicates',
     label: 'Find duplicate contacts',
-    run: tools => toolsLogic.findDuplicates(tools.book, tools.log, confirmDialog)
+    run: (tools, book) => toolsLogic.findDuplicates(book, tools.log, confirmDialog)
   },
   {
     id: 'find-groupless',
     label: 'Find contacts with no group',
-    run: async tools => {
-      await toolsLogic.findGroupless(tools.book, tools.log)
+    run: async (tools, book) => {
+      await toolsLogic.findGroupless(book, tools.log)
       tools.log('Groupless list finished.')
     }
   },
   {
     id: 'fix-groupless',
     label: 'Put all individuals with no group in a new group',
-    run: async tools => {
-      const changed = await toolsLogic.fixGroupless(tools.book, tools.log, confirmDialog)
+    run: async (tools, book) => {
+      const changed = await toolsLogic.fixGroupless(book, tools.log, confirmDialog)
       if (changed) {
         tools.dispatchEvent(new CustomEvent('groups-changed', { bubbles: true, composed: true }))
       }
@@ -124,7 +126,7 @@ export default class Tools extends WebComponent {
   }
 
   private async onAction (action: Action) {
-    if (this.runningAction) return
+    if (this.runningAction || !this.book) return
 
     this.activeAction = action.id
     this.runningAction = action.id
@@ -132,7 +134,7 @@ export default class Tools extends WebComponent {
     this.logLines = []
 
     try {
-      await action.run(this)
+      await action.run(this, this.book)
     } catch (err) {
       debug.error('Tools action "' + action.id + '" failed. Stack: ' + err)
       this.failed = true

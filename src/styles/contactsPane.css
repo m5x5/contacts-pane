@@ -429,6 +429,25 @@ contacts-pane-search.hidden {
   min-height: 12.5rem; /* 200px, same floor as the content box */
 }
 
+/* The circled address-book mark above the empty state's title. */
+.contactPane .detailsEmptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 5rem; /* 80px */
+  height: 5rem;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: var(--solid-ui-color-slate-50, #f8fafc);
+  border: 1px solid var(--solid-ui-color-slate-200, #e2e8f0);
+  color: var(--solid-ui-color-slate-400, #90a1b9);
+}
+
+.contactPane .detailsEmptyIcon icon-lucide-book-user {
+  width: 1.75rem; /* 28px */
+  height: 1.75rem;
+}
+
 /* Explicit margins rather than a flex gap: 20px between the icon and the
    title, 10px between the title and its explanation. Scoped under the content
    box to outrank its generic h3 margin rule. */

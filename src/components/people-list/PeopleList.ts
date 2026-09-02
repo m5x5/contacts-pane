@@ -1,4 +1,5 @@
 import { html, nothing } from 'lit'
+import type { NamedNode } from 'rdflib'
 import { state, property } from 'lit/decorators.js'
 import { repeat } from 'lit/directives/repeat.js'
 import { ref } from 'lit/directives/ref.js'
@@ -11,7 +12,10 @@ import { compareForSort, nameFor } from '../../localUtils'
 import * as debug from '../../debug'
 
 import 'solid-ui/components/button'
-import 'solid-ui/components/icons'
+import '~icons/lucide/ellipsis-vertical'
+import '~icons/lucide/external-link'
+import '~icons/lucide/trash-2'
+import '~icons/lucide/user'
 import 'solid-ui/components/menu'
 import 'solid-ui/components/menu-item'
 
@@ -19,7 +23,7 @@ import styles from './PeopleList.styles.css'
 
 const kb = store
 
-type Person = any
+type Person = NamedNode
 type SelectedGroups = Record<string, boolean>
 
 interface PersonRow {
@@ -207,12 +211,7 @@ export default class PeopleList extends WebComponent {
         <div class="avatar" aria-hidden="true">
           ${avatarUrl
             ? html`<img src=${avatarUrl.value} alt="" />`
-            : html`
-              <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="36" height="36" fill="#e0e0e0"/>
-                <text x="50%" y="58%" text-anchor="middle" fill="#595959" font-size="16" dy=".3em">?</text>
-              </svg>
-            `}
+            : html`<icon-lucide-user class="avatarFallback"></icon-lucide-user>`}
         </div>
         <div class="identity">
           <div class="nameRow">

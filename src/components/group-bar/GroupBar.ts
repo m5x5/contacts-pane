@@ -1,4 +1,5 @@
 import { html, nothing } from 'lit'
+import type { NamedNode } from 'rdflib'
 import { state, property } from 'lit/decorators.js'
 import { repeat } from 'lit/directives/repeat.js'
 import { ref } from 'lit/directives/ref.js'
@@ -9,14 +10,14 @@ import { groupsInOrder, groupMemberCount, handleURIsDroppedOnGroup, refreshNames
 import { groupMembers } from '../../contactLogic'
 
 import 'solid-ui/components/button'
-import 'solid-ui/components/icons'
+import '~icons/lucide/plus'
 import 'solid-ui/components/input'
 
 import styles from './GroupBar.styles.css'
 
 const kb = store
 
-type Group = any
+type Group = NamedNode
 type SelectedGroups = Record<string, boolean>
 
 interface GroupRow {

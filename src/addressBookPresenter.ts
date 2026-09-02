@@ -1,3 +1,4 @@
+import { NamedNode, Statement } from 'rdflib'
 import { addPersonToGroup, groupMembers, getDataModelIssues } from './contactLogic'
 import * as UI from 'solid-ui'
 import { authn, store } from 'solid-logic'
@@ -7,7 +8,7 @@ import { renderDeleteButton } from './components/delete-button'
 import { groupMembership } from './groupMembershipControl'
 
 const ns = UI.ns
-const kb = store as any
+const kb = store
 let dom: any
 let selectedGroups: any = {}
 let ulPeople: any = null
@@ -21,7 +22,14 @@ let dataBrowserContext: any = null
  * The group bar renders itself now, so this only wires up the module state the
  * people list and its helpers still read.
  */
-export function configureAddressBook ({ book: currentBook, dom: domElement, selectedGroups: groupsSelected, ulPeople: peopleUl, cardMain: cardMainEl, dataBrowserContext: context }) {
+export function configureAddressBook ({ book: currentBook, dom: domElement, selectedGroups: groupsSelected, ulPeople: peopleUl, cardMain: cardMainEl, dataBrowserContext: context }: {
+  book: NamedNode | null
+  dom?: Document
+  selectedGroups?: Record<string, boolean>
+  ulPeople?: any
+  cardMain?: any
+  dataBrowserContext?: any
+}) {
   if (domElement) dom = domElement
   if (groupsSelected) selectedGroups = groupsSelected
   if (peopleUl) ulPeople = peopleUl
@@ -35,15 +43,15 @@ export function configureAddressBook ({ book: currentBook, dom: domElement, sele
  * is a reliable stand-in for "not fetched yet" -- and lets us show nothing
  * rather than a misleading 0.
  */
-export function groupMemberCount (group) {
+export function groupMemberCount (group: NamedNode): number | null {
   const loaded = kb.statementsMatching(null, null, null, group.doc()).length > 0
 
   return loaded ? groupMembers(kb, group).length : null
 }
 
-export async function handleURIsDroppedOnGroup (uris, group) {
+export async function handleURIsDroppedOnGroup (uris: string[], group: NamedNode) {
   for (const u of uris) {
-    let thing = kb.sym(u)
+    let thing: NamedNode | undefined = kb.sym(u)
     try {
       thing = await addPersonToGroup(thing, group)
     } catch (_e) {
@@ -64,7 +72,7 @@ export function groupsInOrder (book: any, options: any) {
     ])
   }
   if (book) {
-    const groupIndex = kb.any(book, ns.vcard('groupIndex'))
+    const groupIndex = kb.any(book, ns.vcard('groupIndex')) as NamedNode | null
     const gs = book ? kb.each(book, ns.vcard('includesGroup'), null, groupIndex) : []
     const gs2 = gs.map((g: any) => [book, kb.any(g, ns.vcard('fn')), g])
     sortMe = sortMe.concat(gs2)
@@ -73,11 +81,11 @@ export function groupsInOrder (book: any, options: any) {
   return sortMe.map(tuple => tuple[2])
 }
 
-export async function loadAllGroups (book) {
-  const groupIndex = kb.any(book, ns.vcard('groupIndex'))
+export async function loadAllGroups (book: NamedNode | null): Promise<NamedNode[]> {
+  const groupIndex = book && (kb.any(book, ns.vcard('groupIndex')) as NamedNode | null)
   if (groupIndex) {
     await kb.fetcher.load(groupIndex)
-    const gs = book ? kb.each(book, ns.vcard('includesGroup'), null, groupIndex) : []
+    const gs = (book ? kb.each(book, ns.vcard('includesGroup'), null, groupIndex) : []) as NamedNode[]
     await kb.fetcher.load(gs)
     return gs
   } else {
@@ -86,14 +94,14 @@ export async function loadAllGroups (book) {
 }
 
 // The book could be the main subject, or linked from a group we are dealing with
-export function findBookFromGroups (book) {
+export function findBookFromGroups (book: NamedNode | null): NamedNode {
   if (book) {
     return book
   }
   let g
   for (const gu in selectedGroups) {
     g = kb.sym(gu)
-    const b = kb.any(undefined, ns.vcard('includesGroup'), g)
+    const b = kb.any(undefined, ns.vcard('includesGroup'), g) as NamedNode | null
     if (b) return b
   }
   throw new Error(
@@ -121,7 +129,7 @@ export function refreshNames (ulPeopleArg: any, detailsView: any = null, autoSel
   list.refresh(autoSelect)
 } // refreshNames
 
-export function selectPerson (ulPeopleArg, person, details) {
+export function selectPerson (ulPeopleArg: any, person: NamedNode, details: any) {
   if (!details) return
   const list = ulPeopleArg || ulPeople
   if (list && typeof list.markSelected === 'function') {
@@ -149,7 +157,7 @@ export function selectPerson (ulPeopleArg, person, details) {
 /** Show the contact in a tab of its own -- the people list's menu asks for
  * this. Prefers the address book's own copy of the card, like the link icon
  * that used to sit above the contact did. */
-export function openContactInNewWindow (person) {
+export function openContactInNewWindow (person: NamedNode) {
   let local = person
   try {
     local = book ? localNode(person) : person
@@ -162,7 +170,7 @@ export function openContactInNewWindow (person) {
 /** Confirm and delete a contact: its WebID references in every group, its
  * group memberships, and finally its card and folder. Raised by the people
  * list's per-row menu. */
-export async function deleteContact (person) {
+export async function deleteContact (person: NamedNode) {
   const details = cardMain
 
   if (!(await confirmDialog('Really delete this contact?'))) return
@@ -176,20 +184,20 @@ export async function deleteContact (person) {
   //  - delete the references to it in group files and save them back
   //  - delete the reference in people.ttl and save it back
 
-  let removeFromGroups = []
+  let removeFromGroups: Statement[] = []
   try {
     await loadAllGroups(book) // need to wait for all groups to be loaded in case they have a link to this person
     // load people.ttl
-    const nameEmailIndex = kb.any(book, ns.vcard('nameEmailIndex'))
+    const nameEmailIndex = kb.any(book, ns.vcard('nameEmailIndex')) as NamedNode
     await kb.fetcher.load(nameEmailIndex)
 
     // find all Groups
     const groups = groupMembership(person)
     // find person WebID's
-    groups.forEach(group => {
+    groups.forEach((group: NamedNode) => {
       const webids = getSameAs(kb, person, group.doc())
       // for each check in each Group that it is not used by an other person then delete
-      webids.forEach(webid => {
+      webids.forEach((webid: NamedNode) => {
         if (getSameAs(kb, webid, group.doc()).length === 1) {
           removeFromGroups = removeFromGroups.concat(kb.statementsMatching(group, ns.vcard('hasMember'), webid, group.doc()))
         }
@@ -222,21 +230,21 @@ export async function deleteContact (person) {
   details?.showMessage('Contact data deleted.')
 }
 
-export function deselectAllPeople (ulPeopleArg) {
+export function deselectAllPeople (ulPeopleArg: any) {
   const list = ulPeopleArg || ulPeople
   if (list && typeof list.clearSelection === 'function') {
     list.clearSelection()
   }
 }
 
-function renderPane (subject, paneName) {
+function renderPane (subject: NamedNode, paneName: string) {
   const p = dataBrowserContext.session.paneRegistry.byName(paneName)
   const d = p.render(subject, dataBrowserContext)
   d.classList.add('renderPane')
   return d
 }
 
-function localNode (person) {
+function localNode (person: NamedNode): NamedNode {
   const aliases = kb.allAliases(person)
   const prefix = book.dir().uri
   for (let i = 0; i < aliases.length; i++) {
@@ -248,7 +256,7 @@ function localNode (person) {
 }
 
 // Check every group is in the list and add it if not.
-export async function checkDataModel (book, details) {
+export async function checkDataModel (book: NamedNode | null, details: any) {
   // await kb.fetcher.load(groups) // asssume loaded already
   const groups = await loadAllGroups(book)
 
@@ -275,13 +283,13 @@ export async function checkDataModel (book, details) {
 
 // Prepare book data once so askName forms load instantly
 export async function ensureBookLoaded () {
-  const ourBook = findBookFromGroups(book)
+  const ourBook = findBookFromGroups(book) as NamedNode
   try {
     await kb.fetcher.load(ourBook)
   } catch (err) {
     throw new Error('Book won\'t load:' + ourBook)
   }
-  const nameEmailIndex = kb.any(ourBook, ns.vcard('nameEmailIndex'))
+  const nameEmailIndex = kb.any(ourBook, ns.vcard('nameEmailIndex')) as NamedNode | null
   if (!nameEmailIndex) throw new Error('No nameEmailIndex')
   await kb.fetcher.load(nameEmailIndex)
 }

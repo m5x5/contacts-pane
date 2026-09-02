@@ -1,5 +1,6 @@
 import * as UI from 'solid-ui'
 import * as $rdf from 'rdflib'
+import { NamedNode, Statement } from 'rdflib'
 import { store } from 'solid-logic'
 import { getPersonas } from './webidControl'
 import * as debug from './debug'
@@ -7,20 +8,20 @@ import { getSameAs, confirmDialog, alertDialog } from './localUtils'
 
 const ns = UI.ns
 const utils = UI.utils
-const kb = store as any
+const kb = store
 const updater = kb.updater
 
 /** Perform updates on more than one document   @@ Move to rdflib!
 */
-export async function updateMany (deletions: any[], insertions: any[] = []) {
-  const docs = deletions.concat(insertions).map(st => st.why)
-  const uniqueDocs: any[] = []
+export async function updateMany (deletions: Statement[], insertions: Statement[] = []) {
+  const docs = deletions.concat(insertions).map(st => st.why as NamedNode)
+  const uniqueDocs: NamedNode[] = []
   docs.forEach(doc => {
     if (!uniqueDocs.find(uniqueDoc => uniqueDoc.equals(doc))) uniqueDocs.push(doc)
   })
   const updates = uniqueDocs.map(doc =>
-    kb.updater.update(deletions.filter(st => st.why.sameTerm(doc)),
-      insertions.filter(st => st.why.sameTerm(doc))))
+    kb.updater.update(deletions.filter(st => (st.why as NamedNode).sameTerm(doc)),
+      insertions.filter(st => (st.why as NamedNode).sameTerm(doc))))
   return Promise.all(updates)
 }
 
@@ -29,13 +30,13 @@ export async function updateMany (deletions: any[], insertions: any[] = []) {
 * adds them to the given groups as well.
 * @returns {NamedNode} the person
 */
-export async function saveNewContact (book: any, name: string, selectedGroups: any, klass: any) {
+export async function saveNewContact (book: NamedNode, name: string, selectedGroups: string[] | Record<string, boolean>, klass: NamedNode): Promise<NamedNode | undefined> {
   await kb.fetcher.load(book.doc())
-  const nameEmailIndex = kb.any(book, ns.vcard('nameEmailIndex'))
+  const nameEmailIndex = kb.any(book, ns.vcard('nameEmailIndex')) as NamedNode
 
   const uuid = utils.genUuid()
   const person = kb.sym(
-    book.dir().uri + 'Person/' + uuid + '/index.ttl#this'
+    book.dir()!.uri + 'Person/' + uuid + '/index.ttl#this'
   )
   const doc = person.doc()
 
@@ -92,12 +93,12 @@ export function sanitizeToAlpha (name: string) { // https://mathiasbynens.be/not
  * Creates an empty new group file and adds it to the index
  * @returns group
 */
-export async function saveNewGroup (book: any, name: string) {
+export async function saveNewGroup (book: NamedNode, name: string): Promise<NamedNode> {
   await kb.fetcher.load(book.doc())
-  const gix = kb.any(book, ns.vcard('groupIndex'))
+  const gix = kb.any(book, ns.vcard('groupIndex')) as NamedNode
 
   const gname = sanitizeToAlpha(name)
-  const group = kb.sym(book.dir().uri + 'Group/' + gname + '.ttl#this')
+  const group = kb.sym(book.dir()!.uri + 'Group/' + gname + '.ttl#this')
   const doc = group.doc()
   // debug.log(' New group will be: ' + group + '\n')
   try {
@@ -132,7 +133,7 @@ export async function saveNewGroup (book: any, name: string) {
   return group
 }
 
-export async function addPersonToGroup (thing: any, group: any) {
+export async function addPersonToGroup (thing: NamedNode, group: NamedNode): Promise<NamedNode | undefined> {
   const toBeFetched = [thing.doc(), group.doc()]
   try {
     await kb.fetcher.load(toBeFetched)
@@ -149,7 +150,7 @@ export async function addPersonToGroup (thing: any, group: any) {
     alertDialog('You are trying to add something else than an individual or organization.')
     return
   }
-  let pname = kb.any(thing, ns.vcard('fn'))
+  const pname = kb.any(thing, ns.vcard('fn'))
   const gname = kb.any(group, ns.vcard('fn'))
   if (!pname) {
     debug.warn('Thing ' + thing + ' has no vcard:fn')
@@ -158,7 +159,6 @@ export async function addPersonToGroup (thing: any, group: any) {
   }
   const already = kb.holds(thing, ns.vcard('fn'), null, group.doc())
   if (already) {
-    if (pname === '') pname = 'Contact'
     alertDialog(pname + ' already exists in group ' + gname + '.')
     return
   }
@@ -193,10 +193,10 @@ export async function addPersonToGroup (thing: any, group: any) {
  * Find persons member of a group
  */
 
-export function groupMembers (kb: any, group: any) {
+export function groupMembers (kb: any, group: NamedNode): NamedNode[] {
   const a = kb.each(group, ns.vcard('hasMember'), null, group.doc())
-  let b: any[] = []
-  a.forEach(item => {
+  let b: NamedNode[] = []
+  a.forEach((item: any) => {
     /* const contacts = kb.each(item, ns.owl('sameAs'), null, group.doc())
     if (contacts.length) {
       if (!kb.any(contacts[0], ns.vard('fn'))) b = b.concat(item) // this is the old data model
@@ -213,21 +213,19 @@ export function groupMembers (kb: any, group: any) {
   return b
 }
 
-export function isLocal (group: any, item: any) {
-  const tree = group.dir().dir().dir()
-  const local = item.uri && item.uri.startsWith(tree.uri)
-  // debug.log(`   isLocal ${local} for ${item.uri} in group ${group} tree ${tree.uri}`)
-  return local
+export function isLocal (group: NamedNode, item: NamedNode): boolean {
+  const tree = group.dir()?.dir()?.dir()
+  return !!tree && !!item.uri && item.uri.startsWith(tree.uri)
 }
 
-export async function getDataModelIssues (groups: any[]) {
-  const del: any[] = []
-  const ins: any[] = []
+export async function getDataModelIssues (groups: NamedNode[]): Promise<{ del: Statement[], ins: Statement[] }> {
+  const del: Statement[] = []
+  const ins: Statement[] = []
   groups.forEach(group => {
     const members = kb.each(group, ns.vcard('hasMember'), null, group.doc())
     members.forEach((member) => {
-      const others = getSameAs(kb, member, group.doc())
-      if (others.length && isLocal(group, member)) { // Problem: local ID used instead of webID
+      const others = getSameAs(kb, member as NamedNode, group.doc())
+      if (others.length && isLocal(group, member as NamedNode)) { // Problem: local ID used instead of webID
         for (const other of others) {
           if (!isLocal(group, other)) { // Let's use this one as the immediate member for CSS ACLs'
             // console.warn(`getDataModelIssues:  Need to swap ${member} to ${other}`)
